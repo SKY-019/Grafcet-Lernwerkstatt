@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GRAFCET Lernwerkstatt</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <h1 class="sr-only">GRAFCET Lernwerkstatt</h1>
+  <header class="topbar">
+    <div class="brand" title="GRAFCET Lernwerkstatt">GRAFCET <span>Lernwerkstatt</span></div>
+    <div class="mode-switch" role="tablist" aria-label="Modus">
+      <button data-mode="edit" role="tab" class="on" title="Zeichnen und bearbeiten">Zeichnen</button>
+      <button data-mode="sim" role="tab" title="GRAFCET simulieren (Strg+Enter)">Simulieren</button>
+    </div>
+    <input id="projectTitle" class="title-input" aria-label="Name des GRAFCET" spellcheck="false">
+
+    <div class="tb-group">
+      <button id="btnFile" aria-haspopup="menu" title="Neu, Öffnen, Speichern, Export (Strg+S, Strg+O, Strg+P)">Datei ▾</button>
+    </div>
+    <div class="tb-group">
+      <button id="btnExample" title="Beispiel-GRAFCET laden">Beispiel</button>
+      <button id="btnTask" title="Übungsaufgabe wählen und selbst lösen">Aufgabe</button>
+    </div>
+    <div class="tb-group edit-only">
+      <button id="btnUndo" class="icon" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">
+        <svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3"/></svg>
+      </button>
+      <button id="btnRedo" class="icon" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">
+        <svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h3"/></svg>
+      </button>
+    </div>
+    <div class="tb-group edit-only">
+      <button id="btnLayout" title="Alles automatisch anordnen (L)">Anordnen</button>
+      <button id="btnAlignV" class="icon" title="Auswahl senkrecht untereinander ausrichten" aria-label="Senkrecht ausrichten">
+        <svg viewBox="0 0 24 24"><path d="M12 2v20M7 5h10v4H7zM9 15h6v4H9z"/></svg>
+      </button>
+      <button id="btnAlignH" class="icon" title="Auswahl waagerecht nebeneinander ausrichten" aria-label="Waagerecht ausrichten">
+        <svg viewBox="0 0 24 24"><path d="M2 12h20M5 7h4v10H5zM15 9h4v6h-4z"/></svg>
+      </button>
+    </div>
+    <div class="tb-group zoom">
+      <button id="btnZoomOut" class="icon" title="Verkleinern (−)" aria-label="Verkleinern">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+      </button>
+      <button id="btnZoomReset" class="zoom-label" title="Zoom auf 100 % (0)">100 %</button>
+      <button id="btnZoomIn" class="icon" title="Vergrößern (+)" aria-label="Vergrößern">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>
+      </button>
+      <button id="btnFit" title="Ganze Zeichnung zeigen (F)">Einpassen</button>
+    </div>
+    <div class="spacer"></div>
+    <button id="btnSettings" class="icon" title="Einstellungen" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+    </button>
+    <button id="btnHelp" title="Hilfe und Tastenkürzel (?)">Hilfe</button>
+  </header>
+
+  <main class="workspace">
+    <nav class="palette" id="palette" aria-label="Werkzeuge">
+      <h2>Bearbeiten</h2>
+      <button data-tool="select" title="Auswählen und verschieben (V). Ausgewählte Schritte/Transitionen am unteren Rand ziehen = verbinden.">
+        <svg viewBox="0 0 24 24"><path d="M6 3l12 9-6 1 3 7-3 1-3-7-3 4z"/></svg><span>Auswahl</span><kbd>V</kbd>
+      </button>
+      <button data-tool="connect" title="Verbindung zeichnen (C): von einem Element zum anderen ziehen. Verbindungen lassen sich mit der Maus verschieben.">
+        <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="6"/><path d="M12 8v8"/><rect x="8" y="16" width="8" height="6"/></svg><span>Verbindung</span><kbd>C</kbd>
+      </button>
+      <button data-tool="comment" title="Kommentar (K): Klick auf Schritt/Transition = dessen Kommentar, Klick auf freie Stelle = freier Kommentar">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Kommentar</span><kbd>K</kbd>
+      </button>
+      <button id="btnMulti" title="Mehrfachauswahl ein/aus: Antippen fügt zur Auswahl hinzu (wie Umschalt+Klick) – vor allem für Touch">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M15 5h4v4M5 15v4h4"/></svg><span>Mehrfach</span>
+      </button>
+
+      <h2>Ablauf</h2>
+      <button data-tool="initial" title="Anfangsschritt setzen (A)">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><rect x="7" y="7" width="10" height="10"/></svg><span>Anfangs&shy;schritt</span><kbd>A</kbd>
+      </button>
+      <button data-tool="step" title="Schritt setzen (S)">
+        <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg><span>Schritt</span><kbd>S</kbd>
+      </button>
+      <button data-tool="transition" title="Transition setzen (T)">
+        <svg viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M6 12h12" class="thick"/></svg><span>Transition</span><kbd>T</kbd>
+      </button>
+      <button data-tool="jump" title="Sprung zu einem Zielschritt (J)">
+        <svg viewBox="0 0 24 24"><path d="M12 2v14"/><path d="M7 12l5 6 5-6" class="fill"/></svg><span>Sprung</span><kbd>J</kbd>
+      </button>
+
+      <h2>Verzweigungen</h2>
+      <button data-tool="or" title="ODER-Verzweigung / -Zusammenführung (O)">
+        <svg viewBox="0 0 24 24"><path d="M12 2v5M5 7h14M5 7v14M19 7v14M2 12h6M16 12h6"/></svg><span>ODER</span><kbd>O</kbd>
+      </button>
+      <button data-tool="and" title="UND-Verzweigung / -Zusammenführung (U)">
+        <svg viewBox="0 0 24 24"><path d="M12 2v6M3 8h18M3 11h18M6 11v11M18 11v11"/></svg><span>UND</span><kbd>U</kbd>
+      </button>
+
+      <h2>Struktur</h2>
+      <button data-tool="frame" title="Teil-GRAFCET (G): Klick auf freie Stelle = neuer Teil-GRAFCET, Klick auf einen Ablauf = als Teil-GRAFCET zusammenfassen">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="1"/><path d="M2 8h8V3"/><rect x="10" y="11" width="5" height="5"/></svg><span>Teil-GRAFCET</span><kbd>G</kbd>
+      </button>
+      <button data-tool="macro" title="Makroschritt mit Expansion (Eingangs- und Ausgangsschritt)">
+        <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/><path d="M5 8h14M5 16h14"/></svg><span>Makro&shy;schritt</span>
+      </button>
+      <button data-tool="enclosing" title="Einschließender Schritt mit eingeschlossenem Inhalt">
+        <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/><path d="M5 9l4-4M15 5l4 4M5 15l4 4M15 19l4-4"/></svg><span>Einschließ. Schritt</span>
+      </button>
+
+      <h2>Aktionen</h2>
+      <button data-tool="act-continuous" title="Kontinuierliche Aktion: auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 12h5"/><rect x="7" y="7" width="15" height="10"/></svg><span>Kontinuierl.</span>
+      </button>
+      <button data-tool="act-conditional" title="Bedingte Aktion: auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 15h5"/><rect x="7" y="10" width="15" height="10"/><path d="M10 10V4M7 4h7"/></svg><span>Bedingt</span>
+      </button>
+      <button data-tool="act-stored-on" title="Speichernde Aktion bei Aktivierung (:= beim Aktivieren): auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 15h5"/><rect x="7" y="10" width="15" height="10"/><path d="M10 10V3"/><path d="M7.5 6 10 2.5 12.5 6" class="fill"/></svg><span>Speich. ↑</span>
+      </button>
+      <button data-tool="act-stored-off" title="Speichernde Aktion bei Deaktivierung (:= beim Deaktivieren): auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 9h5"/><rect x="7" y="4" width="15" height="10"/><path d="M10 14v7"/><path d="M7.5 18 10 21.5 12.5 18" class="fill"/></svg><span>Speich. ↓</span>
+      </button>
+      <button data-tool="act-event" title="Aktion bei Ereignis (Fähnchen): auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 15h5"/><rect x="7" y="10" width="15" height="10"/><path d="M10 10V3"/><path d="M10 3l6 2-6 2z" class="fill"/></svg><span>Ereignis</span>
+      </button>
+      <button data-tool="act-forcing" title="Zwangssteuerung, z. B. G2{INIT}: auf einen Schritt klicken">
+        <svg viewBox="0 0 24 24"><path d="M2 12h3"/><rect x="5" y="6" width="17" height="12"/><rect x="8" y="9" width="11" height="6"/></svg><span>Zwang</span>
+      </button>
+    </nav>
+
+    <div class="center">
+    <div id="docTabs" class="doc-tabs" role="tablist" aria-label="Geöffnete Zeichnungen"></div>
+    <div id="frameNav" class="frame-nav" hidden></div>
+    <section class="canvas-wrap" id="canvasWrap">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg" aria-label="Zeichenfläche">
+        <defs>
+          <pattern id="gridDots" patternUnits="userSpaceOnUse" width="20" height="20">
+            <circle id="gridDot" cx="1" cy="1" r="1.1"/>
+          </pattern>
+        </defs>
+        <rect class="grid" width="100%" height="100%" fill="url(#gridDots)"/>
+        <g id="viewport">
+          <g id="content"></g>
+          <g id="overlay"></g>
+        </g>
+      </svg>
+      <div id="emptyHint" class="empty-hint" hidden>
+        <p><strong>Leere Zeichenfläche.</strong></p>
+        <p>Wähle links <em>Anfangsschritt</em> und klicke auf die Fläche – oder lade oben ein <em>Beispiel</em>.</p>
+      </div>
+      <textarea id="inlineText" class="inline-text" hidden spellcheck="false" aria-label="Kommentartext"></textarea>
+      <div id="inlineBox" class="inline-box" hidden>
+        <input id="inlineEdit" spellcheck="false" autocomplete="off">
+        <div id="inlineMsg" class="inline-msg"></div>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div class="statusbar">
+        <span id="statusHint"></span>
+        <span id="statusPos" title="Klicken: Ansicht an eine Koordinate setzen"></span>
+      </div>
+    </section>
+
+    <section class="timing" id="timing" hidden aria-label="Zeitverlauf">
+      <div class="timing-resize" id="trResize" title="Ziehen ändert die Höhe des Zeitverlaufs"></div>
+      <div class="timing-head">
+        <button id="trToggle" class="icon" title="Zeitverlauf ein-/ausklappen" aria-label="Zeitverlauf ein- oder ausklappen">
+          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <h2>Zeitverlauf</h2>
+        <label class="check"><input type="checkbox" id="trRec" checked> Aufzeichnen</label>
+        <label>Fenster
+          <select id="trWindow">
+            <option value="10000">10 s</option>
+            <option value="30000" selected>30 s</option>
+            <option value="60000">60 s</option>
+            <option value="0">alles</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" data-group="inputs" checked> Eingänge</label>
+        <label class="check"><input type="checkbox" data-group="outputs" checked> Ausgänge/Merker</label>
+        <label class="check"><input type="checkbox" data-group="steps" checked> Schritte</label>
+        <button id="trClear" title="Aufzeichnung löschen">Löschen</button>
+      </div>
+      <div class="timing-body" id="timingBody"><svg id="timingSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </section>
+    </div>
+
+    <aside class="sidepanel">
+      <section class="task-panel" id="taskPanel" hidden aria-label="Aufgabe"></section>
+      <section class="props" id="props" aria-label="Eigenschaften"></section>
+      <section class="sim-panel" id="simPanel" hidden aria-label="Simulation"></section>
+      <section class="issues" aria-label="Prüfung">
+        <h2>Prüfung <span id="issueCount" class="issue-count" aria-live="polite"></span></h2>
+        <ul id="issueList"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" class="dialog-head">
+      <h2>Einstellungen</h2>
+      <button class="icon" aria-label="Schließen" title="Schließen (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </form>
+    <div class="dialog-body settings">
+      <h3>Zeichnen</h3>
+      <label class="check"><input type="checkbox" data-pref="originZero"> „Anordnen“ legt den Anfangsschritt auf die Koordinate 0/0</label>
+      <label class="check"><input type="checkbox" data-pref="dragSuggest"> Beim Ziehen aus dem linken Menü passende Verbindungen vorschlagen</label>
+      <h3>Simulation</h3>
+      <label class="check"><input type="checkbox" data-pref="timingOpen"> Zeitverlauf beim Simulieren aufgeklappt anzeigen</label>
+      <h3>Darstellung</h3>
+      <label class="field-inline">Farben
+        <select id="themeSelect">
+          <option value="system">wie im System eingestellt</option>
+          <option value="light">hell</option>
+          <option value="dark">dunkel</option>
+        </select>
+      </label>
+      <h3>Aufgaben</h3>
+      <label class="check"><input type="checkbox" data-pref="showSolution"> Knopf „Musterlösung“ in Aufgaben anzeigen (für Lehrkräfte)</label>
+      <h3>Ansicht an eine Stelle setzen</h3>
+      <p class="muted">Hilfreich, wenn man sich weit von der Zeichnung entfernt hat. Die aktuelle Mausposition steht unten rechts.</p>
+      <div class="coord-row">
+        <label>x <input type="number" id="gotoX" step="20" value="0"></label>
+        <label>y <input type="number" id="gotoY" step="20" value="0"></label>
+        <button id="gotoBtn" class="primary">Hinspringen</button>
+        <button id="gotoOrigin">Zu 0/0</button>
+        <button id="gotoFit">Ganze Zeichnung</button>
+      </div>
+      <p class="muted">Einstellungen werden nur in diesem Browser gespeichert, nicht in der Zeichnung. Zeichnungen speicherst du
+        mit „Speichern“ als Datei; der Browser hält nur eine Notfallkopie ungespeicherter Änderungen, die beim nächsten Start angeboten wird.</p>
+    </div>
+  </dialog>
+
+  <dialog id="taskDialog" class="dialog">
+    <form method="dialog" class="dialog-head">
+      <h2>Übungsaufgaben</h2>
+      <button class="icon" aria-label="Schließen" title="Schließen (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </form>
+    <div class="dialog-body" id="taskListBody"></div>
+  </dialog>
+  <dialog id="helpDialog" class="dialog">
+    <form method="dialog" class="dialog-head">
+      <h2>Hilfe</h2>
+      <button class="icon" aria-label="Schließen" title="Schließen (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </form>
+    <div class="dialog-body">
+      <h3>So entsteht ein GRAFCET</h3>
+      <ol>
+        <li><b>Anfangsschritt</b> wählen und auf die Fläche klicken.</li>
+        <li>Mit <kbd>N</kbd> hängst du an den ausgewählten Schritt eine Transition und den nächsten Schritt an.
+          Alternativ: Werkzeug <b>Transition</b> bzw. <b>Schritt</b> wählen und unterhalb klicken – das ausgewählte Element wird automatisch verbunden.</li>
+        <li><b>Doppelklick</b> auf eine Transition: Bedingung eintippen, mit <kbd>Enter</kbd> bestätigen.</li>
+        <li><b>Verbinden per Ziehen:</b> Element anklicken, dann am Kreis am unteren Rand (beim Schritt: untere Hälfte) ziehen – zu einem anderen Element oder ins Leere, dort entsteht das nächste Element.</li>
+        <li>Aktionen: links unter <b>Aktionen</b> die Art wählen und auf einen Schritt klicken – oder rechts im Feld <b>Eigenschaften</b> „+ Aktion“.</li>
+        <li><b>Kommentare:</b> Werkzeug <b>Kommentar</b> (K) und auf einen Schritt oder eine Transition klicken; Klick auf eine freie Stelle setzt einen freien Kommentar.</li>
+        <li><b>Teil-GRAFCETs:</b> Werkzeug <b>Teil-GRAFCET</b> (G) und einen Rahmen aufziehen. Alles, was im Rahmen liegt, gehört dazu; der Anfasser unten rechts ändert die Größe, am Namen ziehen verschiebt den Rahmen samt Inhalt. Die Leiste über der Fläche springt zu den Teil-GRAFCETs und zeigt, wer wen zwingt. Die Schrittnummern laufen über alle Teil-GRAFCETs weiter.</li>
+        <li><b>Zwangssteuerung:</b> Werkzeug <b>Zwang</b> auf einen Schritt ziehen, rechts Teil-GRAFCET und Situation wählen ({INIT}, {5,6}, {*} einfrieren, {} leer). <em>Lernbeispiel für die Zwangssteuerung: Ein echter NOT-HALT wird zusätzlich als Sicherheitsfunktion nach DIN EN ISO 13850 und DIN EN 60204-1 aufgebaut (z. B. mit Sicherheitsschaltgerät), nicht nur im Ablaufprogramm. Welcher Zustand sicher ist, legt die Risikobeurteilung fest.</em></li>
+        <li><b>Makroschritt / einschließender Schritt:</b> Werkzeug wählen und auf eine freie Stelle oder einen Schritt klicken. Rechts daneben entsteht die Expansion (E…, S…) bzw. der eingeschlossene Inhalt (mit * markierte Schritte werden mit aktiviert).</li>
+        <li><b>Aus dem Menü ziehen:</b> Jedes Werkzeug kann auch direkt auf die Fläche gezogen werden; Schritte und Transitionen schlagen dabei eine passende Verbindung vor.</li>
+        <li><b>Rechtsklick</b> öffnet ein Menü mit den passenden Befehlen (einfügen, Aktion hinzufügen, Kommentar, löschen …).</li>
+        <li>Mit <b>Verbinden</b> ziehst du eine Rückführung zum Anfangsschritt. Schritt → Schritt fügt die fehlende Transition selbst ein.</li>
+        <li>Unten rechts unter <b>Prüfung</b> stehen Fehler und Hinweise. Ein Klick darauf zeigt das betroffene Element.</li>
+      </ol>
+
+      <h3>Speichern, Tabs und Export</h3>
+      <ol>
+        <li>Alles Folgende steht auch im Menü <b>Datei</b> oben. <b>Speichern</b> (<kbd>Strg</kbd>+<kbd>S</kbd>) legt die Zeichnung als Datei <code>Titel.grafcet.json</code> ab. In Chrome und Edge
+          fragt ein Dialog nach dem Ort; danach überschreibt Speichern dieselbe Datei. Andere Browser legen sie im Download-Ordner ab.
+          <kbd>Strg</kbd>+<kbd>Umschalt</kbd>+<kbd>S</kbd> speichert unter einem neuen Namen.</li>
+        <li><b>Öffnen</b> (<kbd>Strg</kbd>+<kbd>O</kbd>) oder Datei auf das Fenster ziehen. Jede Datei kommt in einen eigenen Tab.</li>
+        <li><b>Tabs</b> über der Zeichnung: „+“ öffnet einen neuen, leeren GRAFCET, „×“ schließt. Ein <b>*</b> bedeutet ungespeicherte Änderungen;
+          vor dem Schließen wird nachgefragt. Jeder Tab hat sein eigenes Rückgängig.</li>
+        <li><b>Notfallkopie:</b> Ungespeicherte Änderungen hält der Browser zusätzlich fest. Wurde das Fenster ohne Speichern geschlossen,
+          bietet die Lernwerkstatt beim nächsten Start „Wiederherstellen“ an. Das ersetzt nicht das Speichern als Datei.</li>
+        <li><b>Export:</b> als SVG oder PNG, Drucken bzw. PDF (<kbd>Strg</kbd>+<kbd>P</kbd>, im Druckdialog „Als PDF speichern“) und der
+          Zeitverlauf als PNG. Ist ein Teil-GRAFCET-Rahmen ausgewählt, wird nur er exportiert. Exportiert wird immer hell.</li>
+      </ol>
+
+      <h3>Ohne Maus</h3>
+      <ol>
+        <li><kbd>Strg</kbd> bzw. <kbd>Alt</kbd> + Pfeiltasten wählen das nächste Element in dieser Richtung (ohne Auswahl: den Anfangsschritt).</li>
+        <li>Werkzeugtaste und dann <kbd>Enter</kbd> wendet das Werkzeug auf die Auswahl an, z. B. <kbd>T</kbd> <kbd>Enter</kbd> setzt eine Transition
+          unter den ausgewählten Schritt, <kbd>O</kbd> <kbd>Enter</kbd> legt eine ODER-Verzweigung an.</li>
+        <li>Verbinden: <kbd>C</kbd>, Quelle wählen, <kbd>Enter</kbd>, Ziel mit <kbd>Strg</kbd>+Pfeiltasten wählen, <kbd>Enter</kbd>
+          (Sprung genauso mit <kbd>J</kbd>).</li>
+        <li><kbd>Umschalt</kbd>+<kbd>F10</kbd> oder die Menütaste öffnet das Menü der Auswahl; <kbd>Tab</kbd> erreicht alle Knöpfe und die Einträge unter „Prüfung“.</li>
+      </ol>
+
+      <h3>Mit dem Finger (Handy, Tablet)</h3>
+      <ol>
+        <li>Antippen wählt aus, <b>lange drücken</b> öffnet das Menü (wie Rechtsklick), <b>doppelt tippen</b> beschriftet.</li>
+        <li>Mit einem Finger auf freier Fläche ziehen verschiebt die Ansicht, mit zwei Fingern zoomen.</li>
+        <li><b>Mehrfach</b> (links unter Bearbeiten) schaltet die Mehrfachauswahl ein: Antippen fügt hinzu, Ziehen auf freier Fläche wählt einen Bereich.</li>
+        <li>Werkzeug antippen, dann auf die Fläche oder einen Schritt tippen. Rückgängig, Löschen und Kopieren gibt es oben bzw. im Menü.</li>
+      </ol>
+
+      <h3>Tastenkürzel</h3>
+      <table class="keys">
+        <tr><td><kbd>Strg</kbd>+<kbd>S</kbd> / <kbd>Strg</kbd>+<kbd>O</kbd> / <kbd>Strg</kbd>+<kbd>P</kbd></td><td>Speichern / Öffnen / Drucken (PDF)</td></tr>
+        <tr><td><kbd>V</kbd> / <kbd>Esc</kbd></td><td>Auswahl-Werkzeug, Auswahl aufheben</td></tr>
+        <tr><td><kbd>A</kbd> <kbd>S</kbd> <kbd>T</kbd></td><td>Anfangsschritt, Schritt, Transition setzen</td></tr>
+        <tr><td><kbd>C</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>G</kbd></td><td>Verbinden, Sprung, Kommentar, Teil-GRAFCET</td></tr>
+        <tr><td><kbd>O</kbd> <kbd>U</kbd></td><td>ODER- bzw. UND-Verzweigung</td></tr>
+        <tr><td><kbd>N</kbd></td><td>Nächsten Schritt anhängen bzw. einfügen</td></tr>
+        <tr><td><kbd>I</kbd></td><td>Ausgewählten Schritt zum Anfangsschritt machen / zurück</td></tr>
+        <tr><td><kbd>Enter</kbd> / <kbd>F2</kbd></td><td>Beschriften (Name bzw. Bedingung)</td></tr>
+        <tr><td><kbd>Entf</kbd></td><td>Auswahl löschen</td></tr>
+        <tr><td>Pfeiltasten</td><td>Auswahl verschieben (mit <kbd>Umschalt</kbd> weiter)</td></tr>
+        <tr><td><kbd>Strg</kbd>+<kbd>Z</kbd> / <kbd>Strg</kbd>+<kbd>Y</kbd></td><td>Rückgängig / Wiederholen</td></tr>
+        <tr><td><kbd>Strg</kbd>+<kbd>C</kbd> <kbd>X</kbd> <kbd>V</kbd> <kbd>D</kbd></td><td>Kopieren, Ausschneiden, Einfügen, Duplizieren</td></tr>
+        <tr><td><kbd>Strg</kbd>+<kbd>A</kbd></td><td>Alles auswählen</td></tr>
+        <tr><td><kbd>L</kbd></td><td>Automatisch anordnen</td></tr>
+        <tr><td><kbd>F</kbd> / <kbd>0</kbd> / <kbd>+</kbd> <kbd>−</kbd></td><td>Einpassen / 100 % / Zoom</td></tr>
+        <tr><td>Mausrad</td><td>Ansicht verschieben (mit <kbd>Strg</kbd>: zoomen)</td></tr>
+        <tr><td><kbd>Leertaste</kbd> + Ziehen, mittlere oder rechte Maustaste</td><td>Ansicht verschieben (rechte Taste ohne Ziehen: Menü)</td></tr>
+        <tr><td><kbd>Umschalt</kbd> + Klick, Rahmen ziehen</td><td>Mehrere Elemente auswählen</td></tr>
+        <tr><td><kbd>Umschalt</kbd>+<kbd>F10</kbd> oder Menütaste</td><td>Menü für die Auswahl öffnen (Pfeiltasten, <kbd>Enter</kbd>, <kbd>Esc</kbd>)</td></tr>
+        <tr><td><kbd>Tab</kbd>, dann <kbd>Enter</kbd> oder <kbd>Leertaste</kbd></td><td>Knöpfe ohne Maus bedienen</td></tr>
+      </table>
+
+      <h3>Simulation</h3>
+      <ol>
+        <li>Oben auf <b>Simulieren</b> umschalten. Die Zeichnung ist dann gesperrt, aktive Schritte sind grün mit Punkt markiert.</li>
+        <li><b>Start</b> lässt die Zeit laufen, <b>Pause</b> hält sie an. <b>Einzelschritt</b> führt genau einen Evolutionsschritt aus – so sieht man auch Durchlaufschritte. <b>Zurücksetzen</b> stellt nur die Anfangssituation her; ist sie instabil, schaltet erst <b>Start</b> oder <b>Einzelschritt</b> weiter (so lässt sich auch eine Endlosschleife Schritt für Schritt ansehen).</li>
+        <li>Eingänge rechts anklicken: <em>Schalter</em> rasten ein, <em>Taster</em> sind nur gedrückt, solange man sie hält (in der Pause rasten auch Taster ein). Die Art lässt sich in der Variablentabelle ändern.</li>
+        <li>Orange Transitionen sind freigegeben (alle Vorgängerschritte aktiv) und warten auf ihre Bedingung, grüne können schalten. Variablen mit Wert 1 sind in den Bedingungen grün.</li>
+        <li>Unter <b>Anlage</b> lässt sich eine virtuelle Anlage (Tank, Zylinder, Förderband) zuschalten, die auf Ausgänge reagiert und Sensoren setzt.</li>
+      </ol>
+      <table class="keys">
+        <tr><td><kbd>Strg</kbd>+<kbd>Enter</kbd></td><td>Zwischen Zeichnen und Simulieren wechseln</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Start / Pause</td></tr>
+        <tr><td><kbd>E</kbd></td><td>Einzelschritt</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Zurücksetzen</td></tr>
+      </table>
+
+      <h3>Übungsaufgaben</h3>
+      <ol>
+        <li>Oben <b>Aufgabe</b> wählen. Es entsteht ein leerer GRAFCET; Aufgabentext und Variablen stehen rechts oben.</li>
+        <li>GRAFCET zeichnen, dann <b>Prüfen</b>. Verglichen wird, was die Ausgänge in mehreren Prüfabläufen tun – Schrittnummern und eigene Merker sind frei.</li>
+        <li>Stimmt ein Prüfablauf nicht, nennt die Meldung die Aktion, den Zeitpunkt und den Ausgang (Soll und Ist). <b>Abspielen</b> zeigt den Ablauf in der Simulation und hält an der Abweichung an; <b>Start</b> spielt weiter.</li>
+        <li><b>Tipp</b> gibt schrittweise Hinweise, ohne die Lösung zu zeigen. Eine Musterlösung gibt es nur, wenn sie in den Einstellungen freigeschaltet ist.</li>
+      </ol>
+
+      <h3>Schreibweise der Bedingungen</h3>
+      <table class="keys syntax">
+        <tr><td><code>B1 * B2</code></td><td>UND (gezeichnet als B1 · B2)</td></tr>
+        <tr><td><code>B1 + B2</code></td><td>ODER</td></tr>
+        <tr><td><code>/B1</code></td><td>NICHT (gezeichnet mit Überstrich)</td></tr>
+        <tr><td><code>↑B1</code> oder <code>RE(B1)</code></td><td>steigende Flanke</td></tr>
+        <tr><td><code>↓B1</code> oder <code>FE(B1)</code></td><td>fallende Flanke</td></tr>
+        <tr><td><code>5s/X3</code></td><td>Zeit: wahr, wenn Schritt 3 seit 5 s aktiv ist. Die ältere Schreibweise <code>t/X3/5s</code> und die Kurzform <code>t>5s</code> werden beim Bestätigen automatisch umgewandelt.</td></tr>
+        <tr><td><code>X3</code></td><td>Schrittvariable: Schritt 3 ist aktiv</td></tr>
+        <tr><td><code>1</code></td><td>immer erfüllt</td></tr>
+        <tr><td><code>C1 >= 5</code></td><td>Vergleich (z. B. Zählerstand), gezeichnet als [C1 ≥ 5]</td></tr>
+      </table>
+      <p class="muted">Variablennamen dürfen Buchstaben, Ziffern, _ und Punkt enthalten, z. B. <code>B1</code>, <code>1S2</code>, <code>M_Start</code>.</p>
+    </div>
+  </dialog>
+
+  <dialog id="askDialog" class="dialog dialog-small">
+    <form method="dialog" class="dialog-head">
+      <h2 id="askTitle">Rückfrage</h2>
+      <button class="icon" aria-label="Abbrechen" title="Abbrechen (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </form>
+    <div class="dialog-body">
+      <p id="askText"></p>
+      <div class="btn-row ask-buttons" id="askButtons"></div>
+    </div>
+  </dialog>
+
+  <input type="file" id="fileInput" accept=".json,application/json" multiple hidden>
+  <div id="printArea" class="print-area" aria-hidden="true"></div>
+
+  <!-- Reihenfolge wichtig: Module ohne DOM zuerst (siehe tests/files.json) -->
+  <script src="js/util.js"></script>
+  <script src="js/prefs.js"></script>
+  <script src="js/expr.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/geometry.js"></script>
+  <script src="js/validate.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/plants.js"></script>
+  <script src="js/examples.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/tasklist.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/editor-inline.js"></script>
+  <script src="js/editor-menu.js"></script>
+  <script src="js/editor-keys.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/simui.js"></script>
+  <script src="js/taskui.js"></script>
+  <script src="js/files.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
