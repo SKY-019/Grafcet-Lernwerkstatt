@@ -69,11 +69,15 @@
     });
     var issueList = document.getElementById('issueList');
     issueList.addEventListener('click', onIssueClick);
-    // Tastatur: Eintrag mit Tab erreichen, Enter/Leertaste wie Klick
+    // Tastatur: Eintrag mit Tab erreichen, Enter/Leertaste wie Klick; danach wirken die Tasten
+    // wieder auf die Zeichnung (Enter/F2 beschriftet das gezeigte Element, Strg+Pfeile wählen weiter)
     issueList.addEventListener('keydown', function (e) {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('li[data-ids]')) {
         e.preventDefault();
+        e.stopPropagation();
         onIssueClick(e);
+        if (document.activeElement && issueList.contains(document.activeElement)) document.activeElement.blur();
+        app.toast('Gezeigt und ausgewählt – Enter beschriftet, Strg+Pfeile wählen weiter, Tab führt zurück zur Liste.');
       }
     });
   };

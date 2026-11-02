@@ -225,18 +225,18 @@
     var task = K.get(id);
     if (!task) return;
     document.getElementById('taskDialog').close();
-    app.whenDiscardOk('Aufgabe „' + task.title + '“ in diesem Tab beginnen?', 'Aufgabe beginnen', function () { begin(task); });
+    begin(task);   // eigene Zeichnung bleibt erhalten: die Aufgabe kommt in einen neuen Tab, wenn dieser nicht leer ist
   }
 
   function begin(task) {
     if (app.mode === 'sim') app.setMode('edit');
     var p = K.startProject(task);
-    app.loadProject(p);
+    var tab = GE.files.openInTab(p);
     app.view = { x: 40, y: 30, k: 1 };
     GE.editor.applyView();
     app.select([p.pages[0].steps[0].id]);
     app.setTool('select');
-    app.toast('Aufgabe: ' + task.title);
+    app.toast((tab ? 'Aufgabe in neuem Tab: ' : 'Aufgabe: ') + task.title);
   }
   TU.start = start;
 })(globalThis.GE = globalThis.GE || {});

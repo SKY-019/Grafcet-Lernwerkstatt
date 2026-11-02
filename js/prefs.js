@@ -16,7 +16,11 @@
     timingHeight: 220,     // Höhe des Zeitverlaufs in Pixeln
     showSolution: false,   // Knopf „Musterlösung“ in Aufgaben (für Lehrkräfte)
     solvedTasks: {},       // gelöste Übungsaufgaben { id: true }
-    theme: 'system'        // Darstellung: 'system', 'light' oder 'dark'
+    theme: 'system',       // Darstellung: 'system', 'light' oder 'dark'
+    plcMethod: 'trans',    // SPS-Übersetzung: 'trans' (Transitionsmerker) oder 'chain' (Schrittkette)
+    plcView: 'fbd',        // SPS-Programm zeigen als 'fbd' (FUP), 'ld' (KOP), 'st' oder 'as'
+    sideW: 0,              // Breite der Seitenleiste in Pixeln (0 = Standard)
+    palW: 0                // Breite der Werkzeugleiste in Pixeln (0 = Standard)
   };
 
   var values = {};

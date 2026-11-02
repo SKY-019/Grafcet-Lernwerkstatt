@@ -39,7 +39,12 @@
     var curId = GE.app.primary && M.node(page, GE.app.primary) ? GE.app.primary : GE.app.selectedNodeIds()[0];
     var target = null;
     if (!curId) {
-      target = page.steps.filter(function (s) { return s.initial; })[0] || nodes[0];
+      // Teil-GRAFCET ausgewählt (z. B. über die Leiste): in diesem Rahmen beginnen
+      var fr = (page.frames || []).filter(function (f) { return GE.app.sel[f.id]; })[0];
+      var pool = fr ? nodes.filter(function (n) { return M.frameContains(fr, M.anchorPoint(n)); }) : nodes;
+      if (!pool.length) pool = nodes;
+      target = pool.filter(function (s) { return s.initial; })[0] ||
+        pool.slice().sort(function (a, b) { return a.y - b.y || a.x - b.x; })[0];
     } else {
       var c = M.node(page, curId);
       var best = Infinity;

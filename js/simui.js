@@ -73,7 +73,7 @@
       var timing = document.getElementById('timing');
       var startY = e.clientY;
       var startH = timing.getBoundingClientRect().height;
-      handle.setPointerCapture(e.pointerId);
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* ohne Erfassung geht es auch */ }
       function move(ev) {
         var h = Math.round(U.clamp(startH - (ev.clientY - startY), 90, window.innerHeight * 0.75));
         timing.style.height = h + 'px';
@@ -126,6 +126,7 @@
     lastSig = '';
     lastLogCount = -1;
     buildPanel();
+    GE.plcui.simEnter();
     document.getElementById('timing').hidden = false;
     SU.applyTimingPrefs();
     timer = setInterval(loop, TICK_MS);
@@ -140,6 +141,7 @@
     script = null;
     document.getElementById('timing').hidden = true;
     panel.innerHTML = '';
+    GE.plcui.simLeave();
   };
 
   function stop() {
@@ -339,6 +341,11 @@
       if (mode === 'switch' || e.detail === 0) setInput(name, sim.value(name) ? 0 : 1);
       return;
     }
+    if (b.hasAttribute('data-simview')) {
+      GE.plcui.setSimView(b.getAttribute('data-simview'));
+      update(true);
+      return;
+    }
     if (b.hasAttribute('data-script')) {
       endScript('');
       update(true);
@@ -458,6 +465,9 @@
       '" step="1" value="' + speedIdx + '"> <output id="simSpeedOut">' + fmtSpeed() + '</output></label>' +
       '<div class="sim-status" id="simStatus"></div>' +
       '<span class="sr-only" id="simSay" aria-live="polite"></span>' +
+      '<div class="seg sim-view" role="group" aria-label="Ansicht"><button data-simview="grafcet" title="GRAFCET-Zeichnung">GRAFCET</button>' +
+      '<button data-simview="fbd" title="SPS-Programm als FUP mit den aktuellen Signalen">FUP live</button>' +
+      '<button data-simview="ld" title="SPS-Programm als KOP mit Stromfluss">KOP live</button></div>' +
       '<div class="sim-legend" aria-label="Legende"><span><i class="lg-active"></i>aktiver Schritt</span>' +
       '<span><i class="lg-enabled"></i>Transition freigegeben</span><span><i class="lg-fireable"></i>schaltbar</span></div>' +
       '<div id="simMsg"></div>' +
@@ -577,6 +587,7 @@
     if (force || sig !== lastSig) {
       lastSig = sig;
       GE.editor.render();
+      GE.plcui.live(sim);
     }
 
     var play = document.getElementById('simPlay');

@@ -79,6 +79,7 @@
     if (opts.panel !== false) GE.panel.render();
     if (opts.validate !== false) GE.panel.renderIssues(app.issues);
     GE.taskui.refresh();
+    if (app.mode === 'plc') GE.plcui.render();
     app.updateToolbar();
     GE.files.refresh();
   };
@@ -134,6 +135,7 @@
   app.updateHint = function () {
     var hint = GE.editor.TOOL_HINTS[app.tool] || '';
     if (app.mode === 'sim') hint = 'Simulation: Zeichnung gesperrt · Ziehen verschiebt die Ansicht · Strg+Mausrad zoomt · Strg+Enter zurück zum Zeichnen';
+    if (app.mode === 'plc') hint = '';
     if (app.pendingConnect) {
       var f = M.find(app.page(), app.pendingConnect);
       var name = f ? (f.kind === 'step' ? 'Schritt ' + f.el.name : 'Transition') : '';
@@ -162,34 +164,35 @@
     toastTimer = setTimeout(function () { el.className = 'toast'; }, level ? 4200 : 2800);
   };
 
-  /** Zwischen Zeichnen ('edit') und Simulieren ('sim') umschalten. */
+  /** Zwischen Zeichnen ('edit'), Simulieren ('sim') und SPS-Übersetzung ('plc') umschalten. */
   app.setMode = function (mode) {
     if (mode === app.mode) return;
-    if (mode === 'sim') {
+    var page = app.page();
+    if (mode === 'sim' || mode === 'plc') {
       GE.editor.finishInline(true);
-      var page = app.page();
-      if (!page.steps.length) return app.toast('Es gibt noch nichts zu simulieren.', 'warn');
-      if (!page.steps.some(function (s) { return s.initial; })) {
-        return app.toast('Ohne Anfangsschritt kann die Simulation nicht starten. Setze zuerst einen Anfangsschritt (Taste I).', 'error');
-      }
+      if (!page.steps.length) return app.toast(mode === 'sim' ? 'Es gibt noch nichts zu simulieren.' : 'Es gibt noch nichts zu übersetzen.', 'warn');
+    }
+    if (mode === 'sim' && !page.steps.some(function (s) { return s.initial; })) {
+      return app.toast('Ohne Anfangsschritt kann die Simulation nicht starten. Setze zuerst einen Anfangsschritt (Taste I).', 'error');
+    }
+    if (app.mode === 'sim') GE.simui.leave();
+    if (app.mode === 'plc') GE.plcui.leave();
+    if (mode !== 'edit') {
       app.setTool('select');
       app.sel = {};
-      app.mode = 'sim';
-      document.body.classList.add('mode-sim');
-      document.getElementById('simPanel').hidden = false;
-      GE.simui.enter();
-    } else {
-      GE.simui.leave();
-      app.mode = 'edit';
-      document.body.classList.remove('mode-sim');
-      document.getElementById('simPanel').hidden = true;
     }
+    app.mode = mode;
+    document.body.classList.toggle('mode-sim', mode === 'sim');
+    document.body.classList.toggle('mode-plc', mode === 'plc');
+    document.getElementById('simPanel').hidden = mode !== 'sim';
+    if (mode === 'sim') GE.simui.enter();
+    if (mode === 'plc') GE.plcui.enter();
     var btns = document.querySelectorAll('.mode-switch [data-mode]');
     for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-mode') === app.mode);
     app.updateHint();
     app.refresh();
     // Die Zeichenfläche ändert ihre Größe (Zeitverlauf ein/aus): Ansicht anpassen
-    GE.editor.fit();
+    if (mode !== 'plc') GE.editor.fit();
   };
 
   /**
@@ -446,8 +449,8 @@
 
     example: function (id) {
       var ex = GE.examples.get(id) || GE.examples.list[0];
-      app.loadProject(ex.build());
-      app.toast('Beispiel geladen: ' + ex.title);
+      var tab = GE.files.openInTab(ex.build());
+      app.toast((tab ? 'Beispiel in neuem Tab geöffnet: ' : 'Beispiel geladen: ') + ex.title);
     }
   };
 
@@ -560,6 +563,7 @@
       onSimKey(e, k, lower, ctrl);
       return;
     }
+    if (app.mode === 'plc') return;   // SPS-Ansicht: nur Text, nichts zu bearbeiten
 
     // Strg/Alt + Pfeiltaste: zum benachbarten Element wechseln (Bedienung ohne Maus)
     var NAV = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
@@ -728,7 +732,7 @@
       var b = e.target.closest('[data-ex]');
       if (!b) return;
       menu.remove();
-      app.whenDiscardOk('Beispiel in diesem Tab laden?', 'Beispiel laden', function () { app.cmd.example(b.getAttribute('data-ex')); });
+      app.cmd.example(b.getAttribute('data-ex'));
     });
     setTimeout(function () {
       document.addEventListener('pointerdown', function close(e) {
@@ -743,9 +747,11 @@
     GE.panel.init(app);
     GE.simui.init(app);
     GE.taskui.init(app);
+    GE.plcui.init(app);
     initSettings();
 
     GE.ui.applyTheme();
+    GE.ui.initResizers();
     GE.exporter.init(app);
     document.getElementById('btnFile').addEventListener('click', function (e) { fileMenu(e.currentTarget); });
     bind('btnMulti', function () {

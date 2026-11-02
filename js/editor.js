@@ -643,7 +643,7 @@
         return;
       }
     }
-    var inside = e.target && svg.contains(e.target);
+    var inside = e.target instanceof Node && svg.contains(e.target);
     var world = Ed.toWorld(e.clientX, e.clientY);
     lastWorld = world;
     if (inside || drag) {

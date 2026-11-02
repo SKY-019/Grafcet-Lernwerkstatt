@@ -60,6 +60,74 @@
     }).then(function (v) { return v === true; });
   };
 
+  // ------------------------------------------------------------ Verstellbare Breiten
+
+  /**
+   * Griffe an der Werkzeugleiste (rechter Rand) und an der Seitenleiste (linker Rand).
+   * Ziehen ändert die Breite, Doppelklick stellt die Standardbreite wieder her,
+   * Pfeiltasten verstellen in Schritten. Die Breiten werden als Vorliebe gemerkt.
+   */
+  UI.initResizers = function () {
+    var ws = document.querySelector('.workspace');
+    var specs = [
+      { host: document.querySelector('.sidepanel'), cls: 'res-side', pref: 'sideW', varName: '--side-w', min: 240, max: 0.6, sign: -1, label: 'Breite der Seitenleiste' },
+      { host: document.getElementById('palette'), cls: 'res-pal', pref: 'palW', varName: '--pal-w', min: 96, max: 0.3, sign: 1, label: 'Breite der Werkzeugleiste' }
+    ];
+    function apply(sp, w) {
+      if (w) ws.style.setProperty(sp.varName, Math.round(w) + 'px');
+      else ws.style.removeProperty(sp.varName);
+    }
+    function clamp(sp, w) { return U.clamp(w, sp.min, Math.max(sp.min, window.innerWidth * sp.max)); }
+    function done() { window.dispatchEvent(new Event('resize')); }
+    specs.forEach(function (sp) {
+      if (!sp.host) return;
+      var saved = GE.prefs.get(sp.pref);
+      if (saved) apply(sp, clamp(sp, saved));
+      var h = document.createElement('div');
+      h.className = 'resizer ' + sp.cls;
+      h.tabIndex = 0;
+      h.setAttribute('role', 'separator');
+      h.setAttribute('aria-orientation', 'vertical');
+      h.setAttribute('aria-label', sp.label + ' (Pfeiltasten; Doppelklick oder Pos1 = Standard)');
+      h.title = 'Ziehen ändert die Breite · Doppelklick = Standardbreite';
+      sp.host.appendChild(h);
+      h.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        var startX = e.clientX;
+        var startW = sp.host.getBoundingClientRect().width;
+        try { h.setPointerCapture(e.pointerId); } catch (err) { /* ohne Erfassung geht es auch */ }
+        h.classList.add('drag');
+        function move(ev) { apply(sp, clamp(sp, startW + sp.sign * (ev.clientX - startX))); }
+        function up() {
+          h.removeEventListener('pointermove', move);
+          h.removeEventListener('pointerup', up);
+          h.classList.remove('drag');
+          GE.prefs.set(sp.pref, Math.round(sp.host.getBoundingClientRect().width));
+          done();
+        }
+        h.addEventListener('pointermove', move);
+        h.addEventListener('pointerup', up);
+      });
+      h.addEventListener('dblclick', function () { apply(sp, 0); GE.prefs.set(sp.pref, 0); done(); });
+      h.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 48 : 16;
+        var w = sp.host.getBoundingClientRect().width;
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          w += (e.key === 'ArrowRight' ? 1 : -1) * sp.sign * step;
+          apply(sp, clamp(sp, w));
+          GE.prefs.set(sp.pref, Math.round(clamp(sp, w)));
+        } else if (e.key === 'Home') {
+          apply(sp, 0);
+          GE.prefs.set(sp.pref, 0);
+        } else return;
+        e.preventDefault();
+        e.stopPropagation();
+        done();
+      });
+    });
+  };
+
   // ------------------------------------------------------------ Darstellung
 
   var THEMES = ['system', 'light', 'dark'];

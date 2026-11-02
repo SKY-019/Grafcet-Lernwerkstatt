@@ -13,6 +13,7 @@
     <div class="mode-switch" role="tablist" aria-label="Modus">
       <button data-mode="edit" role="tab" class="on" title="Zeichnen und bearbeiten">Zeichnen</button>
       <button data-mode="sim" role="tab" title="GRAFCET simulieren (Strg+Enter)">Simulieren</button>
+      <button data-mode="plc" role="tab" title="SPS-Programm aus dem GRAFCET: FUP, KOP, ST oder AS (IEC 61131-3)">SPS</button>
     </div>
     <input id="projectTitle" class="title-input" aria-label="Name des GRAFCET" spellcheck="false">
 
@@ -20,8 +21,8 @@
       <button id="btnFile" aria-haspopup="menu" title="Neu, Öffnen, Speichern, Export (Strg+S, Strg+O, Strg+P)">Datei ▾</button>
     </div>
     <div class="tb-group">
-      <button id="btnExample" title="Beispiel-GRAFCET laden">Beispiel</button>
-      <button id="btnTask" title="Übungsaufgabe wählen und selbst lösen">Aufgabe</button>
+      <button id="btnExample" title="Beispiel-GRAFCET öffnen (in einem neuen Tab, wenn hier schon etwas gezeichnet ist)">Beispiel</button>
+      <button id="btnTask" title="Übungsaufgabe wählen und selbst lösen (in einem neuen Tab, wenn hier schon etwas gezeichnet ist)">Aufgabe</button>
     </div>
     <div class="tb-group edit-only">
       <button id="btnUndo" class="icon" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">
@@ -40,7 +41,7 @@
         <svg viewBox="0 0 24 24"><path d="M2 12h20M5 7h4v10H5zM15 9h4v6h-4z"/></svg>
       </button>
     </div>
-    <div class="tb-group zoom">
+    <div class="tb-group zoom canvas-only">
       <button id="btnZoomOut" class="icon" title="Verkleinern (−)" aria-label="Verkleinern">
         <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
       </button>
@@ -159,6 +160,8 @@
       </div>
     </section>
 
+    <section class="plc-view" id="plcView" hidden aria-label="SPS-Programm"></section>
+
     <section class="timing" id="timing" hidden aria-label="Zeitverlauf">
       <div class="timing-resize" id="trResize" title="Ziehen ändert die Höhe des Zeitverlaufs"></div>
       <div class="timing-head">
@@ -188,6 +191,7 @@
       <section class="task-panel" id="taskPanel" hidden aria-label="Aufgabe"></section>
       <section class="props" id="props" aria-label="Eigenschaften"></section>
       <section class="sim-panel" id="simPanel" hidden aria-label="Simulation"></section>
+      <section class="plc-panel" id="plcPanel" hidden aria-label="SPS-Übersetzung"></section>
       <section class="issues" aria-label="Prüfung">
         <h2>Prüfung <span id="issueCount" class="issue-count" aria-live="polite"></span></h2>
         <ul id="issueList"></ul>
@@ -257,6 +261,7 @@
         <li><b>Makroschritt / einschließender Schritt:</b> Werkzeug wählen und auf eine freie Stelle oder einen Schritt klicken. Rechts daneben entsteht die Expansion (E…, S…) bzw. der eingeschlossene Inhalt (mit * markierte Schritte werden mit aktiviert).</li>
         <li><b>Aus dem Menü ziehen:</b> Jedes Werkzeug kann auch direkt auf die Fläche gezogen werden; Schritte und Transitionen schlagen dabei eine passende Verbindung vor.</li>
         <li><b>Rechtsklick</b> öffnet ein Menü mit den passenden Befehlen (einfügen, Aktion hinzufügen, Kommentar, löschen …).</li>
+        <li>Werkzeugleiste und Seitenleiste lassen sich am Rand breiter oder schmaler ziehen; Doppelklick auf den Rand stellt die Standardbreite wieder her.</li>
         <li>Mit <b>Verbinden</b> ziehst du eine Rückführung zum Anfangsschritt. Schritt → Schritt fügt die fehlende Transition selbst ein.</li>
         <li>Unten rechts unter <b>Prüfung</b> stehen Fehler und Hinweise. Ein Klick darauf zeigt das betroffene Element.</li>
       </ol>
@@ -282,7 +287,10 @@
           unter den ausgewählten Schritt, <kbd>O</kbd> <kbd>Enter</kbd> legt eine ODER-Verzweigung an.</li>
         <li>Verbinden: <kbd>C</kbd>, Quelle wählen, <kbd>Enter</kbd>, Ziel mit <kbd>Strg</kbd>+Pfeiltasten wählen, <kbd>Enter</kbd>
           (Sprung genauso mit <kbd>J</kbd>).</li>
-        <li><kbd>Umschalt</kbd>+<kbd>F10</kbd> oder die Menütaste öffnet das Menü der Auswahl; <kbd>Tab</kbd> erreicht alle Knöpfe und die Einträge unter „Prüfung“.</li>
+        <li>Umschalt+F10 oder die Menütaste öffnet das Menü der Auswahl; Tab erreicht alle Knöpfe und die Einträge unter „Prüfung“.
+          Enter auf einem Eintrag zeigt das Element; danach beschriftet Enter es direkt.</li>
+        <li>Teil-GRAFCET in der Leiste über der Fläche wählen (Tab, Enter), dann Strg+Pfeiltasten: Die Auswahl beginnt in diesem Teil-GRAFCET.</li>
+        <li>Breite der Werkzeugleiste und der Seitenleiste: Griff am Rand mit Tab erreichen, Pfeiltasten ändern, Pos1 = Standard.</li>
       </ol>
 
       <h3>Mit dem Finger (Handy, Tablet)</h3>
@@ -332,9 +340,22 @@
         <tr><td><kbd>R</kbd></td><td>Zurücksetzen</td></tr>
       </table>
 
+      <h3>SPS-Programm (FUP, KOP, ST, AS)</h3>
+      <ol>
+        <li>Oben auf <b>SPS</b> umschalten (türkis abgesetzt: Hier steht kein GRAFCET mehr, sondern das SPS-Programm). Der GRAFCET wird nach IEC 61131-3 übersetzt: als <b>FUP</b> (Funktionsplan mit SR-Flipflops), <b>KOP</b> (Kontaktplan mit Kontakten und Spulen), <b>ST</b> (Strukturierter Text, bei Siemens SCL) oder <b>AS</b> (Ablaufsprache, bei Siemens GRAPH, mit Bestimmungszeichen N, S, R, D, P1, P0).</li>
+        <li><b>Transitionsmerker</b> (Standard): erst alle Transitionen berechnen (<code>T1 := X1 AND B1</code>), dann die Schrittmerker setzen und rücksetzen. <b>Klassische Schrittkette</b>: Setzen = Vorgängerschritt UND Bedingung, Rücksetzen = Folgeschritt.</li>
+        <li><code>Init</code> ist nur im ersten Zyklus 1 und setzt die Anfangsschritte. Zeiten werden zu TON (mit Abfallverzögerung TON + TOF), Flanken zu R_TRIG/F_TRIG, Zähler zu ADD/SUB.</li>
+        <li><b>Kopieren</b>, <b>Speichern</b> (.st bzw. .as) und <b>Drucken</b> stehen rechts. Achtung Siemens: Dort sind SR und RS umgekehrt benannt.</li>
+        <li>KOP: ein Schrittmerker hat zwei Strombahnen – erst Rücksetzen (R), dann Setzen (S); die spätere gewinnt. AS kennt keine Zwangssteuerung, keine Makro- und keine einschließenden Schritte (Hinweise rechts).</li>
+        <li>In der Simulation zeigen <b>FUP live</b> und <b>KOP live</b> das Programm mit den aktuellen Signalen (grün = 1 bzw. Strom fließt).</li>
+        <li><b>im GRAFCET zeigen</b> an einem Netzwerk springt zum zugehörigen Schritt bzw. zur Transition.</li>
+        <li><b>PLCopen XML</b> speichert das Programm zum Einlesen in andere Werkzeuge (z. B. CODESYS: „PLCopenXML importieren“).</li>
+        <li><b>Selbsttest</b>: Fragen zum angezeigten Programm, z. B. womit ein Schrittmerker gesetzt wird.</li>
+      </ol>
+
       <h3>Übungsaufgaben</h3>
       <ol>
-        <li>Oben <b>Aufgabe</b> wählen. Es entsteht ein leerer GRAFCET; Aufgabentext und Variablen stehen rechts oben.</li>
+        <li>Oben <b>Aufgabe</b> wählen. Es entsteht ein leerer GRAFCET – in einem neuen Tab, wenn im aktuellen schon etwas gezeichnet ist; Aufgabentext und Variablen stehen rechts oben.</li>
         <li>GRAFCET zeichnen, dann <b>Prüfen</b>. Verglichen wird, was die Ausgänge in mehreren Prüfabläufen tun – Schrittnummern und eigene Merker sind frei.</li>
         <li>Stimmt ein Prüfablauf nicht, nennt die Meldung die Aktion, den Zeitpunkt und den Ausgang (Soll und Ist). <b>Abspielen</b> zeigt den Ablauf in der Simulation und hält an der Abweichung an; <b>Start</b> spielt weiter.</li>
         <li><b>Tipp</b> gibt schrittweise Hinweise, ohne die Lösung zu zeigen. Eine Musterlösung gibt es nur, wenn sie in den Einstellungen freigeschaltet ist.</li>
@@ -385,6 +406,9 @@
   <script src="js/examples.js"></script>
   <script src="js/tasks.js"></script>
   <script src="js/tasklist.js"></script>
+  <script src="js/plc.js"></script>
+  <script src="js/fbd.js"></script>
+  <script src="js/ld.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/editor-inline.js"></script>
@@ -392,6 +416,7 @@
   <script src="js/editor-keys.js"></script>
   <script src="js/panel.js"></script>
   <script src="js/simui.js"></script>
+  <script src="js/plcui.js"></script>
   <script src="js/taskui.js"></script>
   <script src="js/files.js"></script>
   <script src="js/export.js"></script>

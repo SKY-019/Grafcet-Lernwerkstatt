@@ -101,6 +101,20 @@
     return d;
   };
 
+  /**
+   * Projekt öffnen, ohne etwas zu überschreiben: im aktuellen Tab, wenn er leer ist,
+   * sonst in einem neuen Tab. Liefert true, wenn ein neuer Tab entstand.
+   */
+  F.openInTab = function (project) {
+    if (cur && isBlank(cur)) {
+      if (app.mode === 'sim') app.setMode('edit');
+      app.loadProject(project);
+      return false;
+    }
+    F.newTab(project);
+    return true;
+  };
+
   F.closeTab = function (id) {
     var d = docs.filter(function (x) { return x.id === id; })[0];
     if (!d) return;

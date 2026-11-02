@@ -1,0 +1,16 @@
+GRAFCET Lernwerkstatt
+=====================
+
+Editor und Simulator für GRAFCET (angelehnt an DIN EN 60848), gedacht für Lernende.
+Mit Übersetzung in SPS-Logik (FUP, KOP, ST und AS nach IEC 61131-3).
+Keine Installation, keine externen Abhängigkeiten, keine Datenübertragung an einen Server.
+
+Starten: index.html im Browser öffnen (aktueller Chrome, Edge oder Firefox)
+oder den ganzen Ordner auf einen Webspace für statische Seiten hochladen.
+
+Hinweise:
+- Projekte werden als Datei gespeichert (Datei > Speichern). Der Browser merkt sich
+  nur Einstellungen und eine Notfallkopie, und zwar nur auf dem jeweiligen Gerät.
+- Vollständige Normkonformität wird nicht behauptet.
+- Die Anwendung ist nur zum Üben gedacht. Sie ersetzt keine Sicherheitsprüfung
+  realer Steuerungen (z. B. NOT-HALT).

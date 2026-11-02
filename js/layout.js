@@ -284,6 +284,36 @@
     // letzter Durchlauf von oben, damit Ketten exakt untereinander stehen
     for (var e = 0; e < layers.length; e++) sweepLayer(layers[e], fin);
 
+    // Getrennte Abläufe nebeneinander: Platz auch für ihre Rückführungen links lassen
+    // (die Lücken oben berücksichtigen nur die Elemente selbst)
+    var comp = {};
+    function root(id) { while (comp[id] !== id) id = comp[id] = comp[comp[id]]; return id; }
+    nodes.forEach(function (nd) { comp[nd.id] = nd.id; });
+    Object.keys(out).forEach(function (u) { out[u].forEach(function (v) { comp[root(u)] = root(v); }); });
+    var groups = {};
+    nodes.forEach(function (nd) {
+      var g = groups[root(nd.id)] || (groups[root(nd.id)] = { ids: [], x1: Infinity, x2: -Infinity, backs: 0 });
+      g.ids.push(nd.id);
+      g.x1 = Math.min(g.x1, x[nd.id] - ext[nd.id].left);
+      g.x2 = Math.max(g.x2, x[nd.id] + ext[nd.id].right);
+    });
+    Object.keys(back).forEach(function (k) { groups[root(k.split('>')[0])].backs++; });
+    var list = Object.keys(groups).map(function (k) { return groups[k]; });
+    if (list.length > 1) {
+      list.forEach(function (g) { if (g.backs) g.x1 -= R.C.BACK_SIDE + R.C.BACK_STEP * (g.backs - 1) + 10; });
+      list.sort(function (a, b) { return a.x1 - b.x1; });
+      var right = -Infinity;
+      list.forEach(function (g) {
+        var d = right + SPACING - g.x1;
+        if (d > 0) {
+          g.ids.forEach(function (id) { x[id] += d; });
+          g.x1 += d;
+          g.x2 += d;
+        }
+        right = Math.max(right, g.x2);
+      });
+    }
+
     // 4. Senkrechte Positionen: mindestens PITCH, mehr bei hohen Aktionen
     //    (Bedingungen, Pfeile, Aktionen untereinander)
     var yOf = [];

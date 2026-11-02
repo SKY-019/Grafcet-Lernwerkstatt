@@ -156,7 +156,7 @@ code { font: 13px var(--mono); }
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 140px 1fr 340px;
+  grid-template-columns: var(--pal-w, 140px) 1fr var(--side-w, 340px);
 }
 
 /* Werkzeugleiste links: Abschnitte, je zwei Werkzeuge nebeneinander */
@@ -279,6 +279,7 @@ code { font: 13px var(--mono); }
 
 /* ------------------------------------------------------------ Seitenleiste */
 .sidepanel {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -478,7 +479,7 @@ body.mode-sim .el { cursor: grab; }
   .tb-group + .tb-group { padding-left: 8px; }
 }
 @media (max-width: 1000px) {
-  .workspace { grid-template-columns: 124px 1fr 290px; }
+  .workspace { grid-template-columns: var(--pal-w, 124px) 1fr var(--side-w, 290px); }
 }
 @media (max-width: 760px) {
   body { overflow: auto; }
@@ -540,7 +541,7 @@ body.mode-sim .palette,
 body.mode-sim .edit-only,
 body.mode-sim #props,
 body.mode-sim .issues { display: none !important; }
-body.mode-sim .workspace { grid-template-columns: 1fr 370px; }
+body.mode-sim .workspace { grid-template-columns: 1fr var(--side-w, 370px); }
 
 /* ------------------------------------------------------------ Simulationspanel */
 .sim-panel { flex: 1 1 auto; overflow-y: auto; padding: 12px 14px; }
@@ -893,3 +894,103 @@ body.palette-dragging, body.palette-dragging * { cursor: copy !important; }
 /* kurze sichtbare Hinweise im Eigenschaftsfeld (statt nur Tooltip) */
 .prop-hint { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); }
 .act-sym-bar { margin: 4px 0 0; }
+
+/* ------------------------------------------------------------ SPS-Übersetzung (Modus SPS, FUP live) */
+body.mode-plc .palette,
+body.mode-plc .edit-only,
+body.mode-plc .canvas-only,
+body.mode-plc #props,
+body.mode-plc .issues,
+body.mode-plc .frame-nav,
+body.mode-plc .canvas-wrap,
+body.sim-fbd .canvas-wrap,
+body.sim-fbd .canvas-only { display: none !important; }
+body.mode-plc .workspace { grid-template-columns: 1fr var(--side-w, 370px); }
+.plc-panel { flex: 1 1 auto; overflow-y: auto; padding: 12px 14px; }
+.plc-view { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 14px; background: var(--bg); }
+.plc-head { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.plc-head strong { color: var(--text); }
+.plc-on { color: var(--ok); font-weight: 600; }
+.plc-st { margin: 0; padding: 12px 14px; font: 13px/1.5 var(--mono); white-space: pre; overflow: auto; tab-size: 2;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+.plc-st .k { color: var(--accent); font-weight: 600; }
+.plc-st .c { color: var(--muted); }
+.plc-hints { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+.plc-hints li + li { margin-top: 6px; }
+.plc-vars { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.plc-vars th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 3px 4px; }
+.plc-vars td { border-bottom: 1px solid var(--border); padding: 3px 4px; vertical-align: top; }
+.plc-vars code { font-size: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 0 0 10px; }
+.seg button { border: 0; border-radius: 0; min-height: 30px; padding: 4px 14px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button.on { background: var(--accent); color: var(--accent-text); }
+.sim-view { margin: 8px 0 0; }
+.fbd-net { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 0 10px; padding: 8px 12px 4px; }
+.fbd-net h3 { font-size: 13.5px; margin: 0 0 2px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.fbd-no { color: var(--accent); margin-right: 6px; }
+.fbd-cmt { margin: 0 0 2px; color: var(--muted); font-size: 12.5px; }
+.fbd-scroll { overflow-x: auto; }
+.fbd { display: block; color: var(--text); }
+.fbd text { fill: currentColor; }
+.fbd .box { fill: var(--panel); stroke: currentColor; stroke-width: 1.4; }
+.fbd .bt { font-weight: 600; }
+.fbd .inst { font-size: 11.5px; }
+.fbd .pin { font-size: 11px; fill: var(--muted); }
+.fbd .w { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.fbd .w.open { stroke: var(--muted); stroke-dasharray: 3 3; }
+.fbd .neg { fill: var(--panel); stroke: currentColor; stroke-width: 1.4; }
+.fbd .tgt { font-weight: 700; }
+.fbd .w.on { stroke: var(--ok); stroke-width: 3; }
+.fbd text.on { fill: var(--ok); font-weight: 700; }
+@media (max-width: 760px) {
+  body.mode-plc .workspace { grid-template-columns: 1fr; grid-template-rows: minmax(360px, 70vh) auto; }
+  body.sim-fbd .plc-view { min-height: 360px; }
+}
+@media print {
+  .print-area.plc svg { width: auto; max-width: 100%; height: auto; max-height: none; }
+  .print-area.plc .fbd-net { break-inside: avoid; border: 1px solid #999; background: #fff; }
+  .print-area.plc .fbd, .print-area.plc .fbd-net h3 { color: #000; }
+  .print-area.plc .fbd .box, .print-area.plc .fbd .neg { fill: #fff; }
+  .print-area.plc .fbd .pin, .print-area.plc .fbd-cmt { fill: #444; color: #444; }
+  .print-area.plc .plc-st { white-space: pre-wrap; border: 0; background: #fff; color: #000; font-size: 10pt; }
+}
+.plc-panel .btn-row + .prop-hint { margin-top: 10px; }
+
+/* ------------------------------------------------------------ Verstellbare Breiten (Ziehen; Doppelklick = Standard) */
+.palette { position: relative; }
+.resizer { position: absolute; top: 0; bottom: 0; width: 8px; z-index: 6; cursor: col-resize; touch-action: none; }
+.resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; }
+.resizer:hover::after, .resizer:focus-visible::after, .resizer.drag::after { background: var(--accent); }
+.res-side { left: -4px; }
+.res-pal { right: -4px; }
+body.mode-sim .res-pal, body.mode-plc .res-pal { display: none; }
+@media (max-width: 760px) { .resizer { display: none; } }
+
+/* ------------------------------------------------------------ SPS deutlich vom GRAFCET abgesetzt */
+:root { --plc: #0b6e69; --plc-soft: #dff3f1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --plc: #4fd1c5; --plc-soft: #173634; } }
+:root[data-theme="dark"] { --plc: #4fd1c5; --plc-soft: #173634; }
+.mode-switch button[data-mode="plc"].on { background: var(--plc); color: #fff; }
+:root[data-theme="dark"] .mode-switch button[data-mode="plc"].on { color: #0d1522; }
+.plc-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; background: var(--plc); color: #fff; font-size: 11.5px; font-weight: 600; vertical-align: 1px; }
+:root[data-theme="dark"] .plc-badge { color: #0d1522; }
+.plc-view { border-top: 4px solid var(--plc); }
+.plc-panel { border-top: 4px solid var(--plc); }
+.plc-panel .seg button.on, .sim-view button[data-simview="fbd"].on, .sim-view button[data-simview="ld"].on { background: var(--plc); color: #fff; }
+.fbd-no { color: var(--plc); }
+.plc-q { margin: 0 0 10px; background: var(--panel); }
+.fbd.ld .rail { stroke: currentColor; stroke-width: 3; }
+.fbd.ld .ct { fill: none; stroke: currentColor; stroke-width: 1.6; }
+.fbd.ld .ct.on { stroke: var(--ok); stroke-width: 2.6; }
+.fbd.ld .ck { font-size: 10px; font-weight: 700; }
+.fbd .box.on { stroke: var(--ok); stroke-width: 2.4; }
+
+/* Selbsttest im Modus SPS, Verweis vom Netzwerk zum GRAFCET */
+.quiz-q { margin: 4px 0 6px; font-size: 13.5px; }
+.quiz-opts { display: grid; gap: 6px; }
+.quiz-opts button { text-align: left; white-space: normal; }
+.quiz-opts button code { font-size: 12.5px; }
+.quiz-opts button.ok { border-color: var(--ok); background: var(--active); color: var(--active-ink); opacity: 1; }
+.quiz-opts button.bad { border-color: var(--error); background: var(--error-soft); opacity: 1; }
+.fbd-goto { font-size: 12px; font-weight: 400; margin-left: 8px; }
