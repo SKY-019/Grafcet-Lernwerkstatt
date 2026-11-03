@@ -161,6 +161,8 @@
   M.normalize = function (project) {
     function arr(v) { return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : []; }
     function num(v) { v = +v; return isFinite(v) ? v : 0; }
+    // Lagen und Versätze begrenzen (sonst hängt die Zeichnung bei Werten wie 1e308)
+    function pos(v) { return Math.max(-M.COORD_MAX, Math.min(M.COORD_MAX, num(v))); }
     function str(v) { return v == null ? '' : String(v); }
     project.format = 'grafcet-editor';
     project.version = project.version || 1;
@@ -208,19 +210,19 @@
         checkId(fr, 'g');
         fr.kind = fr.kind === 'macro' || fr.kind === 'enclosed' ? fr.kind : 'partial';
         fr.name = str(fr.name);
-        fr.x = num(fr.x);
-        fr.y = num(fr.y);
-        fr.w = Math.max(80, num(fr.w) || 320);
-        fr.h = Math.max(60, num(fr.h) || 260);
+        fr.x = pos(fr.x);
+        fr.y = pos(fr.y);
+        fr.w = Math.max(M.FRAME_MIN_W, Math.min(M.COORD_MAX, num(fr.w) || 320));
+        fr.h = Math.max(M.FRAME_MIN_H, Math.min(M.COORD_MAX, num(fr.h) || 260));
         if (fr.owner != null) fr.owner = str(fr.owner);
       });
       // ältere Form (Zugehörigkeit am Element) wird nicht mehr verwendet
       pg.steps.concat(pg.transitions, pg.notes).forEach(function (el) {
         delete el.frame;
-        el.x = num(el.x);
-        el.y = num(el.y);
-        if (el.commentDx !== undefined) el.commentDx = num(el.commentDx);
-        if (el.commentDy !== undefined) el.commentDy = num(el.commentDy);
+        el.x = pos(el.x);
+        el.y = pos(el.y);
+        if (el.commentDx !== undefined) el.commentDx = pos(el.commentDx);
+        if (el.commentDy !== undefined) el.commentDy = pos(el.commentDy);
         if (el.commentPos !== undefined && !COMMENT_POS[el.commentPos]) delete el.commentPos;
       });
       pg.notes.forEach(function (nt) {
@@ -252,8 +254,8 @@
         l.from = str(l.from);
         l.to = str(l.to);
         l.jump = !!l.jump;
-        if (l.dx !== undefined) l.dx = num(l.dx);
-        if (l.dy !== undefined) l.dy = num(l.dy);
+        if (l.dx !== undefined) l.dx = pos(l.dx);
+        if (l.dy !== undefined) l.dy = pos(l.dy);
       });
     });
     project.nextId = Math.max(num(project.nextId) || 1, maxId + 1);
@@ -370,6 +372,7 @@
   // ---------------------------------------------------------------- Rahmen (Teil-GRAFCETs u. a.)
 
   M.FRAME_MIN_W = 80;
+  M.COORD_MAX = 1000000;   // größte Lage bzw. Versatz beim Öffnen einer Datei
   M.FRAME_MIN_H = 60;
 
   /** Nächster freier Name G1, G2, … */

@@ -176,6 +176,7 @@
     GE.simui.playScript({
       timeline: K.timeline(task, i),
       failTime: run && run.fail ? run.fail.time : null,
+      failPre: !!(run && run.fail && run.fail.pre),
       failText: run ? run.text : ''
     });
   };

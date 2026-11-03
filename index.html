@@ -263,7 +263,10 @@
         <li><b>Rechtsklick</b> öffnet ein Menü mit den passenden Befehlen (einfügen, Aktion hinzufügen, Kommentar, löschen …).</li>
         <li>Werkzeugleiste und Seitenleiste lassen sich am Rand breiter oder schmaler ziehen; Doppelklick auf den Rand stellt die Standardbreite wieder her.</li>
         <li>Mit <b>Verbinden</b> ziehst du eine Rückführung zum Anfangsschritt. Schritt → Schritt fügt die fehlende Transition selbst ein.</li>
-        <li>Unten rechts unter <b>Prüfung</b> stehen Fehler und Hinweise. Ein Klick darauf zeigt das betroffene Element.</li>
+        <li>Unten rechts unter <b>Prüfung</b> stehen Fehler und Hinweise. Ein Klick darauf zeigt das betroffene Element.
+          Gewarnt wird auch, wenn eine Transition nie schalten kann (ihre Vorgängerschritte sind nie gleichzeitig aktiv) oder
+          ein Schritt ein zweites Mal aktiviert würde – meist ist dann eine Zusammenführung falsch (einfache Linie = ODER, Doppellinie = UND).</li>
+        <li><b>Umbenennen</b> eines Schritts oder Teil-GRAFCETs: Die Lernwerkstatt fragt, ob Bezüge wie X3, 5s/X3 oder G1{…} mitgeändert werden sollen.</li>
       </ol>
 
       <h3>Speichern, Tabs und Export</h3>
@@ -286,7 +289,7 @@
         <li>Werkzeugtaste und dann <kbd>Enter</kbd> wendet das Werkzeug auf die Auswahl an, z. B. <kbd>T</kbd> <kbd>Enter</kbd> setzt eine Transition
           unter den ausgewählten Schritt, <kbd>O</kbd> <kbd>Enter</kbd> legt eine ODER-Verzweigung an.</li>
         <li>Verbinden: <kbd>C</kbd>, Quelle wählen, <kbd>Enter</kbd>, Ziel mit <kbd>Strg</kbd>+Pfeiltasten wählen, <kbd>Enter</kbd>
-          (Sprung genauso mit <kbd>J</kbd>).</li>
+          (Sprung genauso mit <kbd>J</kbd>). Wird dabei eine Transition eingefügt, kannst du gleich ihre Bedingung eintippen.</li>
         <li>Umschalt+F10 oder die Menütaste öffnet das Menü der Auswahl; Tab erreicht alle Knöpfe und die Einträge unter „Prüfung“.
           Enter auf einem Eintrag zeigt das Element; danach beschriftet Enter es direkt.</li>
         <li>Teil-GRAFCET in der Leiste über der Fläche wählen (Tab, Enter), dann Strg+Pfeiltasten: Die Auswahl beginnt in diesem Teil-GRAFCET.</li>

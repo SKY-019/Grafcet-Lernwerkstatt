@@ -120,7 +120,9 @@
       text: 'Die Schranke ist zu (B4 = 1). Steht ein Auto auf der Induktionsschleife (B1 = 1), öffnet sie (Y1),\n' +
         'bis sie oben ist (B2). Sie bleibt offen, bis das Auto die Lichtschranke B3 vollständig durchfahren hat:\n' +
         'B3 wird erst 1 und dann wieder 0 (fallende Flanke ↓B3).\n' +
-        '2 s danach schließt die Schranke (Y2), bis sie unten ist (B4).',
+        '2 s danach schließt die Schranke (Y2), bis sie unten ist (B4).\n' +
+        'Vereinfachung für die Übung: Ein weiteres Auto während des Schließens wird nicht beachtet\n' +
+        '(eine echte Schranke würde dann wieder öffnen).',
       vars: {
         B1: ['Auto auf der Induktionsschleife', 'switch'],
         B2: ['Schranke oben', 'switch'],
@@ -263,7 +265,7 @@
       level: 2,
       topic: 'Speichernde Aktionen',
       title: 'Lackierkabine',
-      text: 'In der Grundstellung ist die Tür offen (B2 = 1). Nach Start mit S1:\n' +
+      text: 'In der Grundstellung ist die Tür offen (B2 = 1). Nach Start mit S1 – nur bei offener Tür:\n' +
         '1. Die Absaugung M1 wird eingeschaltet und die Tür schließt (Y1), bis sie zu ist (B1).\n' +
         '2. Lackieren (Y2) für 10 s.\n' +
         '3. Trocknen mit der Heizung E1 für 5 s.\n' +
@@ -411,42 +413,43 @@
       text: 'Mit der Anlage „Zylinder“ (bistabile Impulsventile) kannst du deine Lösung ausprobieren.\n' +
         'Nach Start mit S1 – nur wenn beide Zylinder eingefahren sind – läuft die Folge:\n' +
         '1A1 fährt aus (A+), dann 2A1 aus (B+), dann 1A1 ein (A−), dann 2A1 ein (B−).\n' +
-        'Jeder Schritt wartet auf den Endlagensensor der gerade bewegten Kolbenstange.\n' +
+        'Jeder Schritt wartet auf den Endlagensensor der gerade bewegten Kolbenstange:\n' +
+        '1B1/1B2 = 1A1 eingefahren/ausgefahren, 2B1/2B2 = 2A1 eingefahren/ausgefahren.\n' +
         'Bistabile Ventile brauchen nur einen Impuls: 1M1 = 1A1 ausfahren, 1M2 = 1A1 einfahren, 2M1 und 2M2 für 2A1.\n' +
         'Jede Ventilspule soll nur in ihrem eigenen Schritt angesteuert sein.',
       plant: { id: 'cylinder', options: { valve: 'bi' } },
       vars: {
         S1: ['Start-Taster', 'button'],
-        '1B1': ['1A eingefahren', 'switch', 1],
-        '1B2': ['1A ausgefahren', 'switch'],
-        '2B1': ['2A eingefahren', 'switch', 1],
-        '2B2': ['2A ausgefahren', 'switch'],
-        '1M1': ['Ventilspule 1A ausfahren', 'out'],
-        '1M2': ['Ventilspule 1A einfahren', 'out'],
-        '2M1': ['Ventilspule 2A ausfahren', 'out'],
-        '2M2': ['Ventilspule 2A einfahren', 'out']
+        '1B1': ['1A1 eingefahren', 'switch', 1],
+        '1B2': ['1A1 ausgefahren', 'switch'],
+        '2B1': ['2A1 eingefahren', 'switch', 1],
+        '2B2': ['2A1 ausgefahren', 'switch'],
+        '1M1': ['Ventilspule 1A1 ausfahren', 'out'],
+        '1M2': ['Ventilspule 1A1 einfahren', 'out'],
+        '2M1': ['Ventilspule 2A1 ausfahren', 'out'],
+        '2M2': ['Ventilspule 2A1 einfahren', 'out']
       },
       solution: {
         steps: {
           s1: ['1', true, [], 'Grundstellung'],
-          s2: ['2', false, [[C, '1M1']], '1A ausfahren (A+)'],
-          s3: ['3', false, [[C, '2M1']], '2A ausfahren (B+)'],
-          s4: ['4', false, [[C, '1M2']], '1A einfahren (A−)'],
-          s5: ['5', false, [[C, '2M2']], '2A einfahren (B−)']
+          s2: ['2', false, [[C, '1M1']], '1A1 ausfahren (A+)'],
+          s3: ['3', false, [[C, '2M1']], '2A1 ausfahren (B+)'],
+          s4: ['4', false, [[C, '1M2']], '1A1 einfahren (A−)'],
+          s5: ['5', false, [[C, '2M2']], '2A1 einfahren (B−)']
         },
         trans: {
           t1: ['↑S1 * 1B1 * 2B1', 'Start in Grundstellung'],
-          t2: ['1B2', '1A ausgefahren'],
-          t3: ['2B2', '2A ausgefahren'],
-          t4: ['1B1', '1A eingefahren'],
-          t5: ['2B1', '2A eingefahren']
+          t2: ['1B2', '1A1 ausgefahren'],
+          t3: ['2B2', '2A1 ausgefahren'],
+          t4: ['1B1', '1A1 eingefahren'],
+          t5: ['2B1', '2A1 eingefahren']
         },
         links: [['s1', 't1'], ['t1', 's2'], ['s2', 't2'], ['t2', 's3'], ['s3', 't3'], ['t3', 's4'],
           ['s4', 't4'], ['t4', 's5'], ['s5', 't5'], ['t5', 's1']]
       },
       runs: [
         ['Ein Durchlauf', ['S1^', '1B1=0', '1B2=1', '2B1=0', '2B2=1', '1B2=0', '1B1=1', '2B2=0', '2B1=1', '1s']],
-        ['Start, wenn 2A nicht eingefahren ist', ['2B1=0', 'S1^', '1s', '2B1=1', '1s']]
+        ['Start, wenn 2A1 nicht eingefahren ist', ['2B1=0', 'S1^', '1s', '2B1=1', '1s']]
       ],
       hints: [
         'Zeichne für jede Bewegung einen eigenen Schritt mit der passenden Ventilspule.',

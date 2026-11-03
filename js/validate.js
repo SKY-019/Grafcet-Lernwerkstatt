@@ -54,6 +54,104 @@
     return 'Schritt ' + (s.name || '(ohne Namen)');
   }
 
+  /** „Schritt 2 und 3“, „Schritt 2, 3 und 4“ */
+  function stepNames(list) {
+    var n = list.map(function (s) { return s.name || '(ohne Namen)'; });
+    return 'Schritt ' + (n.length > 1 ? n.slice(0, -1).join(', ') + ' und ' + n[n.length - 1] : n[0]);
+  }
+
+  /**
+   * Situationen je Ablauf ohne Bedingungen durchspielen (höchstens SITUATION_LIMIT, sonst ohne Meldung):
+   * Transitionen mit mehreren Vorgängern, die nie freigegeben sind (Verklemmung), und Schritte, die
+   * ein zweites Mal aktiviert würden, während sie noch aktiv sind (UND-Zweige nicht zusammengeführt).
+   */
+  V.SITUATION_LIMIT = 2000;
+  function checkSituations(page, frames, add) {
+    var stepById = {};
+    page.steps.forEach(function (s) { stepById[s.id] = s; });
+    var trans = page.transitions.map(function (t) {
+      return {
+        t: t,
+        pre: M.inLinks(page, t.id).map(function (l) { return l.from; }).filter(function (id) { return stepById[id]; }),
+        post: M.outLinks(page, t.id).map(function (l) { return l.to; }).filter(function (id) { return stepById[id]; })
+      };
+    }).filter(function (x) { return x.pre.length; });
+    // Startsituationen aus Zwangssteuerungen: Teil-GRAFCET -> Listen von Schritten
+    var forcedSets = [];
+    page.steps.forEach(function (s) {
+      s.actions.forEach(function (a) {
+        if (a.type !== 'forcing' || a.forceMode === 'freeze') return;
+        var fr = frames.filter(function (x) { return x.kind === 'partial' && x.name === (a.target || '').trim(); })[0];
+        if (!fr) return;
+        var members = M.frameMembers(page, fr.id, true).filter(function (el) { return stepById[el.id]; });
+        var names = M.forceStepNames(a);
+        forcedSets.push(members.filter(function (el) {
+          return a.forceMode === 'init' ? el.initial : a.forceMode === 'steps' ? names.indexOf(el.name) >= 0 : false;
+        }).map(function (el) { return el.id; }));
+      });
+    });
+
+    M.components(page).forEach(function (comp) {
+      var inComp = {};
+      comp.forEach(function (id) { inComp[id] = true; });
+      var steps = page.steps.filter(function (s) { return inComp[s.id]; });
+      // Makro-, Eingangs-, Ausgangs- und einschließende Schritte (und deren Inhalt) vorerst auslassen
+      if (steps.some(function (s) {
+        return (s.kind && s.kind !== 'normal') || M.frameOf(page, s, ['macro', 'enclosed']);
+      })) return;
+      var ts = trans.filter(function (x) { return inComp[x.t.id]; });
+      var byFirst = {};    // erster Vorgängerschritt -> Transitionen
+      ts.forEach(function (x) { (byFirst[x.pre[0]] = byFirst[x.pre[0]] || []).push(x); });
+      var starts = [steps.filter(function (s) { return s.initial; }).map(function (s) { return s.id; })];
+      forcedSets.forEach(function (set) {
+        if (set.length && set.every(function (id) { return inComp[id]; })) starts.push(set);
+      });
+      starts = starts.filter(function (x) { return x.length; });
+      if (!starts.length) return;
+
+      var seen = {};
+      var queue = [];
+      function push(set) {
+        var key = set.slice().sort().join(' ');
+        if (seen[key]) return;
+        seen[key] = true;
+        queue.push(set);
+      }
+      starts.forEach(push);
+      var enabled = {};    // Transition-id -> irgendwann freigegeben
+      var twice = {};      // Schritt-id -> Transition-id
+      var count = 0;
+      while (queue.length) {
+        if (++count > V.SITUATION_LIMIT) return;
+        var set = queue.shift();
+        var on = {};
+        set.forEach(function (id) { on[id] = true; });
+        set.forEach(function (first) { (byFirst[first] || []).forEach(function (x) {
+          if (!x.pre.every(function (id) { return on[id]; })) return;
+          enabled[x.t.id] = true;
+          var next = set.filter(function (id) { return x.pre.indexOf(id) < 0; });
+          x.post.forEach(function (id) {
+            if (on[id] && x.pre.indexOf(id) < 0) { if (!twice[id]) twice[id] = x.t.id; }
+            else if (next.indexOf(id) < 0) next.push(id);
+          });
+          push(next);
+        }); });
+      }
+      ts.forEach(function (x) {
+        if (x.pre.length < 2 || enabled[x.t.id]) return;
+        var pre = x.pre.map(function (id) { return stepById[id]; });
+        add('warning', 'Die Transition nach ' + stepNames(pre) + ' kann nie schalten: ' + stepNames(pre) +
+          ' sind nie gleichzeitig aktiv. Liegen sie in verschiedenen Zweigen einer ODER-Verzweigung? ' +
+          'Dann gehört dort eine ODER-Zusammenführung hin (einfache Linie).', [x.t.id]);
+      });
+      steps.forEach(function (s) {
+        if (!twice[s.id]) return;
+        add('warning', stepLabel(s) + ' kann ein zweites Mal aktiviert werden, während er noch aktiv ist. ' +
+          'Meist fehlt eine UND-Zusammenführung (Doppellinie) für die Zweige einer UND-Verzweigung.', [s.id, twice[s.id]]);
+      });
+    });
+  }
+
   V.page = function (page) {
     var issues = [];
     function add(level, text, ids) { issues.push({ level: level, text: text, ids: ids || [] }); }
@@ -309,6 +407,8 @@
         }
       });
     }
+
+    checkSituations(page, frames, add);
 
     // --- Aktionen
     var usage = {}; // Variable -> {assign:[stepIds], store:[stepIds]}

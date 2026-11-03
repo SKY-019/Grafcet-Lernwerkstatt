@@ -230,10 +230,12 @@
   /**
    * Seite mit einem Zeitplan durchlaufen. Ruft sample(sim, t) nach jedem
    * Ereignis und alle STEP_MS auf; liefert sample einen Wert, wird abgebrochen.
+   * Vorher einmal sample(sim, 0, true): die Grundstellung, bevor die Eingänge bei t = 0 gesetzt werden.
    */
   T.drive = function (page, tl, sample) {
     var sim = new S.Sim(page, tl.init);
     sim.recording = false;
+    if (sample(sim, sim.time, true)) return sim;
     var k = 0;
     for (var guard = 0; guard < 100000; guard++) {
       var applied = false;
@@ -257,7 +259,8 @@
     var tl = T.timeline(task, runIndex);
     var outs = T.outputs(task);
     var res = [];
-    T.drive(page, tl, function (sim, t) {
+    T.drive(page, tl, function (sim, t, pre) {
+      if (pre) return;
       var o = {};
       outs.forEach(function (v) { o[v.name] = +sim.value(v.name) || 0; });
       res.push([t, o]);
@@ -278,16 +281,17 @@
     var tl = T.timeline(task, runIndex);
     var outs = T.outputs(task);
     var refTrace = [];
-    T.drive(ref, tl, function (sim, t) {
+    var refPre = null;
+    T.drive(ref, tl, function (sim, t, pre) {
       var o = {};
       outs.forEach(function (v) { o[v.name] = +sim.value(v.name) || 0; });
-      refTrace.push([t, o]);
+      if (pre) refPre = o; else refTrace.push([t, o]);
     });
     var i = 0;
     var fail = null;
-    var sim = T.drive(page, tl, function (sim, t) {
-      while (i < refTrace.length - 1 && refTrace[i][0] < t) i++;
-      var want = refTrace[i][1];
+    var sim = T.drive(page, tl, function (sim, t, pre) {
+      while (!pre && i < refTrace.length - 1 && refTrace[i][0] < t) i++;
+      var want = pre ? refPre : refTrace[i][1];
       var diffs = [];
       outs.forEach(function (v) {
         var got = +sim.value(v.name) || 0;
@@ -295,7 +299,7 @@
       });
       if (!diffs.length) return false;
       // alle Ausgänge nennen, die im ersten abweichenden Augenblick falsch sind
-      fail = { time: t, name: diffs[0].name, want: diffs[0].want, got: diffs[0].got, diffs: diffs };
+      fail = { time: t, name: diffs[0].name, want: diffs[0].want, got: diffs[0].got, diffs: diffs, pre: !!pre };
       return true;
     });
     var res = { name: tl.name, ok: !fail && !sim.error, actions: tl.actions.length };
@@ -311,7 +315,7 @@
       fail.idx = ai;
       fail.label = act.label;
       res.fail = fail;
-      var when = ai === 0 && dt === 0 && fail.time === 0 ? 'Gleich zu Beginn (Grundstellung)'
+      var when = fail.pre ? 'Gleich zu Beginn (Grundstellung)'
         : 'Bei Aktion ' + (ai + 1) + ' „' + act.label + '“' + (dt > 0 ? ', ' + fmtS(dt) + ' danach' : '');
       res.text = when + ': ' + fail.diffs.map(function (d) {
         var soll = d.want === 0 ? 'soll aber aus sein' : d.want === 1 ? 'soll aber an sein' : 'soll aber ' + d.want + ' sein';

@@ -277,6 +277,8 @@
 
   // ------------------------------------------------------------ Notfallkopie
 
+  var recoveryWarned = false;
+
   function writeRecovery() {
     clearTimeout(recoveryTimer);
     recoveryTimer = null;
@@ -292,7 +294,11 @@
         }));
       }
     } catch (e) {
-      // ohne Browserspeicher gibt es keine Notfallkopie
+      // ohne Browserspeicher gibt es keine Notfallkopie – einmal je Sitzung darauf hinweisen
+      if (!recoveryWarned && dirty.length) {
+        recoveryWarned = true;
+        GE.app.toast('Notfallkopie nicht möglich (Browserspeicher voll oder gesperrt). Bitte mit Strg+S speichern.', 'warn');
+      }
     }
   }
 

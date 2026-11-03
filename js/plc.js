@@ -186,11 +186,20 @@
         post: M.outLinks(page, t.id).map(function (l) { return l.to; }).filter(function (id) { return stepById[id]; })
       };
     });
-    // Namen der Transitionsmerker: T1, T2 … in Lesereihenfolge (wie M.numberTransitions)
-    trans.slice().sort(function (a, b) { return a.t.y - b.t.y || a.t.x - b.t.x; }).forEach(function (tr, i) {
+    // Namen der Transitionsmerker: erst die benannten (T2, (T2), 2), dann die unbenannten
+    // in Lesereihenfolge mit den kleinsten freien Nummern
+    var takenNo = {};
+    trans.forEach(function (tr) {
       var m = /^\(?T?(\d+)\)?$/.exec(tr.t.name || '');
-      tr.label = 'T' + (m ? m[1] : i + 1);
+      if (m) { tr.label = 'T' + m[1]; takenNo[+m[1]] = true; }
       tr.cond = tr.t.cond || '';
+    });
+    var nextNo = 1;
+    trans.slice().sort(function (a, b) { return a.t.y - b.t.y || a.t.x - b.t.x; }).forEach(function (tr) {
+      if (tr.label) return;
+      while (takenNo[nextNo]) nextNo++;
+      takenNo[nextNo] = true;
+      tr.label = 'T' + nextNo;
     });
     trans.forEach(function (tr) {
       tr.name = claim(tPrefix + tr.label.slice(1));
@@ -272,6 +281,26 @@
       });
     }
 
+    // ---- 2a. Ereignismerker: Aktionen bei Ereignis gelten für die Schritte, die vor dem Weiterschalten aktiv waren
+    var evDecls = [];
+    var evOf = [];        // [{s, a, name}]
+    page.steps.forEach(function (s) {
+      s.actions.forEach(function (a) {
+        if (!a.var || a.type !== 'event') return;
+        var name = claim('EV' + (evOf.length + 1));
+        evOf.push({ s: s, a: a, name: name });
+        var c = a.cond || '?';
+        net({
+          kind: 'assign', group: 'event', target: name,
+          expr: and([X(s.id), a.cond ? condOf(a.cond, 'Aktion ' + a.var + ' in Schritt ' + s.name) : FALSE]),
+          title: 'Ereignis ' + c + ' in Schritt ' + s.name + ' (Schritt vor dem Weiterschalten)', el: s.id,
+          comment: a.var + ' := ' + a.value + ' bei ' + c
+        });
+        evDecls.push({ grafcet: '', name: name, type: 'BOOL', art: 'event', comment: 'Ereignis ' + c + ' in Schritt ' + s.name + ' (für ' + a.var + ')' });
+      });
+    });
+    function evName(s, a) { return evOf.filter(function (x) { return x.s === s && x.a === a; })[0].name; }
+
     // ---- 3. Schritte (äußere vor inneren, sonst in der Reihenfolge der Seite)
     var order = page.steps.slice().sort(function (a, b) { return depth(a.id) - depth(b.id); });
     order.forEach(function (s) {
@@ -313,7 +342,7 @@
       s.actions.forEach(function (a) {
         if (!a.var || (a.type !== 'stored' && a.type !== 'event')) return;
         var trig = a.type === 'event'
-          ? and([X(s.id), a.cond ? condOf(a.cond, 'Aktion ' + a.var + ' in Schritt ' + s.name) : FALSE])
+          ? v(evName(s, a))
           : stepEdge(s.id, a.when === 'deactivation' ? 'down' : 'up');
         (storedVars[a.var] = storedVars[a.var] || []).push({ s: s, a: a, trig: trig });
       });
@@ -388,6 +417,7 @@
       trans.forEach(function (tr) { decls.push({ grafcet: tr.label, name: tr.name, type: 'BOOL', art: 'trans', comment: 'Transition ' + tr.label + ': ' + tr.cond }); });
     }
     partials.forEach(function (fr) { if (forceName[fr.id]) decls.push({ grafcet: '', name: forceName[fr.id], type: 'BOOL', art: 'force', comment: 'Zwangssteuerung von ' + fr.name + ' wirksam' }); });
+    decls.push.apply(decls, evDecls);
     decls.push({ grafcet: '', name: initName, type: 'BOOL', art: 'init', init: 'TRUE', comment: 'Erstzyklus' });
     fbs.forEach(function (f) { decls.push({ grafcet: '', name: f.name, type: f.fb, art: 'fb', comment: fbComment(f) }); });
 
@@ -676,6 +706,20 @@
     function sname(s) { return 'Schritt' + P.ident(s.name).replace(/^_/, ''); }
     var notes = [];
     var rows = [];
+    var usedFb = [];    // im AS-Text benutzte Bausteininstanzen (Aufrufe als Kommentar am Anfang)
+    function useFb(f) {
+      if (usedFb.indexOf(f) < 0) usedFb.push(f);
+      return { op: 'var', name: f.name + '.Q' };
+    }
+    /** Instanz aus dem Programm zu einer Flanke bzw. Zeit der Bedingung (wie in translate). */
+    function fbFor(a) {
+      return prog.fbs.filter(function (f) {
+        var s = f.src;
+        if (!s || s.type !== a.type) return false;
+        if (a.type === 'edge') return f.fb === (a.dir === 'up' ? 'R_TRIG' : 'F_TRIG') && E.format(s.a) === E.format(a.a);
+        return s.v === a.v && s.t1 === a.t1 && (a.t2 > 0 ? f.fb === 'TOF' && s.t2 === a.t2 : f.fb === 'TON');
+      })[0];
+    }
 
     /** Bedingung in AS: Schrittmerker als Schritt.X, Zeit seit Aktivierung als Schritt.T. */
     function sfcNode(nd) {
@@ -685,7 +729,7 @@
         return { op: 'var', name: '(' + sname(stepVar[f.a.name]) + '.T >= ' + P.timeLiteral(f.pt) + ')' };
       }
       if (nd.op === 'var' && stepVar[nd.name]) return { op: 'var', name: sname(stepVar[nd.name]) + '.X' };
-      if (nd.op === 'fb') return { op: 'var', name: nd.name + '.Q' };
+      if (f) return useFb(f);
       var c = Object.assign({}, nd);
       if (nd.items) c.items = nd.items.map(sfcNode);
       if (nd.a) c.a = sfcNode(nd.a);
@@ -707,11 +751,14 @@
           case 'and': return { op: 'and', items: a.items.map(c) };
           case 'or': return { op: 'or', items: a.items.map(c) };
           case 'cmp': return { op: 'cmp', cmp: a.op, l: c(a.l), r: c(a.r) };
-          case 'edge': return { op: 'var', name: (a.dir === 'up' ? 'R_TRIG' : 'F_TRIG') + '(' + E.format(a.a) + ').Q' };
+          case 'edge':
+            var fe = fbFor(a);
+            return fe ? useFb(fe) : { op: 'var', name: (a.dir === 'up' ? 'R_TRIG' : 'F_TRIG') + '(' + E.format(a.a) + ').Q' };
           case 'timer':
             var st = M.stepByName(page, String(a.v).replace(/^X/, ''));
             if (st && /^X/.test(a.v) && !(a.t2 > 0)) return { op: 'var', name: '(' + sname(st) + '.T >= ' + P.timeLiteral(a.t1) + ')' };
-            return { op: 'var', name: 'TON(' + a.v + ', ' + P.timeLiteral(a.t1) + ').Q' };
+            var ft = fbFor(a);
+            return ft ? useFb(ft) : { op: 'var', name: 'TON(' + a.v + ', ' + P.timeLiteral(a.t1) + ').Q' };
         }
         return { op: 'const', value: false };
       }
@@ -838,9 +885,14 @@
       L.push('(* ---- Aktionen *)');
       actions.forEach(function (a) { L.push(a); L.push(''); });
     }
-    if (prog.fbs.some(function (f) { return f.fb !== 'TON' || !(f.a && f.a.op === 'var' && stepVar[f.a.name]); })) {
-      notes.push('Flanken und Zeiten, die sich nicht auf einen Schritt beziehen, stehen hier als Baustein-Ausgänge (z. B. R_TRIG(...).Q). ' +
-        'In einem echten Programm werden die Bausteine in einem eigenen Netzwerk aufgerufen.');
+    if (usedFb.length) {
+      var calls = [];
+      usedFb.sort(function (a, b) { return GE.util.naturalCompare(a.name, b.name); });
+      usedFb.forEach(function (f) { fbCalls(f, calls); });
+      calls = calls.filter(function (x, i, a) { return a.indexOf(x) === i; }).map(function (c) { return '   ' + c; });
+      L.splice.apply(L, [2, 0, '(* Bausteinaufrufe im SPS-Programm (eigenes Netzwerk vor der Ablaufkette):'].concat(calls, ['*)']));
+      notes.push('Flanken und Zeiten, die sich nicht auf einen Schritt beziehen, stehen hier als Ausgänge der Bausteine (z. B. ' + usedFb[0].name + '.Q). ' +
+        'Die Aufrufe der Bausteine stehen im Kommentar am Anfang; im SPS-Programm stehen sie in einem eigenen Netzwerk.');
     }
     return { text: L.join('\n'), rows: rows, notes: notes.filter(function (x, i, a) { return a.indexOf(x) === i; }) };
   };
@@ -851,7 +903,7 @@
     'GRAFCET: Aktionen in Kästen (kontinuierlich, bedingt, speichernd, bei Ereignis). AS: Aktionen mit Bestimmungszeichen N, S, R, D, P1, P0 …',
     'Zeiten: GRAFCET schreibt 5s/X3, AS fragt die Schrittzeit ab (Schritt3.T >= T#5s).',
     'Zwangssteuerung, Makroschritte und einschließende Schritte gibt es in AS nicht.',
-    'AS schaltet pro Zyklus; mehrere Transitionen nacheinander ohne Zeitfortschritt (instabile Situation) gibt es dort nicht.'
+    'Eine SPS mit AS schaltet in der Regel einmal je Zyklus weiter; eine instabile Situation (mehrere Transitionen nacheinander ohne Zeitfortschritt) läuft dort über mehrere Zyklen.'
   ];
 
   // ------------------------------------------------------------ Ausführung wie eine SPS

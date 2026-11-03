@@ -219,7 +219,7 @@
   /**
    * Prüfablauf einer Aufgabe abspielen: Grundstellung herstellen, Eingänge
    * nach dem Zeitplan setzen und dort anhalten, wo die Lösung abweicht.
-   * opts: { timeline (tasks.timeline), failTime (ms oder null), failText }
+   * opts: { timeline (tasks.timeline), failTime (ms oder null), failPre (Abweichung schon in der Grundstellung), failText }
    * Die Zeitschritte treffen die Zeitpunkte des Plans genau, damit der Ablauf
    * derselbe ist wie bei der Prüfung. Eine Anlage steht so lange still.
    */
@@ -229,8 +229,14 @@
     held = {};
     sim.reset(opts.timeline.init);
     script = { tl: opts.timeline, k: 0, failTime: opts.failTime, failText: opts.failText || '', state: 'run' };
-    scriptDue();
-    if (!scriptStop()) running = true;
+    if (opts.failPre) {
+      // vor den ersten Eingängen anhalten: dort weicht die Grundstellung ab
+      script.failTime = null;
+      script.state = 'fail';
+    } else {
+      scriptDue();
+      if (!scriptStop()) running = true;
+    }
     lastLogCount = -1;
     update(true);
   };
@@ -352,7 +358,8 @@
       return;
     }
     if (b.hasAttribute('data-pact')) {
-      plant.actions[+b.getAttribute('data-pact')].run(plantState);
+      var msg = plant.actions[+b.getAttribute('data-pact')].run(plantState);
+      if (typeof msg === 'string') app.toast(msg);
       P.applySensors(plant, plantState, plantNames, sim);
       afterInput();
       return;

@@ -488,7 +488,6 @@
     return fire;
   };
 
-  /** Bis zur stabilen Situation weiterschalten, dann Ausgänge zuweisen. */
   /**
    * Bis zur stabilen Situation weiterschalten. Durchlaufschritte (in dieser Auswertung
    * aktiviert und gleich wieder verlassen) stehen danach als transient im letzten
@@ -609,7 +608,6 @@
     this.record();
   };
 
-  /** Zustand für die Markierung in der Zeichnung. */
   /**
    * Kennung dessen, was die Zeichnung in der Simulation zeigt (aktive Schritte, Freigaben,
    * Werte, Fortschritt der Zeitbalken in 1/50-Schritten). Ändert sie sich, wird neu gezeichnet.

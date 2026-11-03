@@ -1,5 +1,6 @@
 GRAFCET Lernwerkstatt
 =====================
+Stand: 03.11.2026 (Git-Tag stand-pruefbericht-2)
 
 Editor und Simulator für GRAFCET (angelehnt an DIN EN 60848), gedacht für Lernende.
 Mit Übersetzung in SPS-Logik (FUP, KOP, ST und AS nach IEC 61131-3).

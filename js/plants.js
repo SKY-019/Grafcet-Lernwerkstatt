@@ -126,16 +126,16 @@
   var cylinder = {
     id: 'cylinder',
     title: 'Zwei Zylinder mit Endlagen',
-    description: 'Zwei doppeltwirkende Zylinder 1A und 2A mit Endlagensensoren. Ventile wahlweise monostabil (Feder) oder bistabil (Impuls).',
+    description: 'Zwei doppeltwirkende Zylinder 1A1 und 2A1 mit Endlagensensoren. Ventile wahlweise monostabil (Feder) oder bistabil (Impuls).',
     signals: [
-      { id: 'c1out', dir: 'out', name: '1M1', label: 'Zylinder 1A ausfahren' },
-      { id: 'c1in', dir: 'out', name: '1M2', label: 'Zylinder 1A einfahren (bistabil)' },
-      { id: 'c1b1', dir: 'in', name: '1B1', label: 'Zylinder 1A eingefahren' },
-      { id: 'c1b2', dir: 'in', name: '1B2', label: 'Zylinder 1A ausgefahren' },
-      { id: 'c2out', dir: 'out', name: '2M1', label: 'Zylinder 2A ausfahren' },
-      { id: 'c2in', dir: 'out', name: '2M2', label: 'Zylinder 2A einfahren (bistabil)' },
-      { id: 'c2b1', dir: 'in', name: '2B1', label: 'Zylinder 2A eingefahren' },
-      { id: 'c2b2', dir: 'in', name: '2B2', label: 'Zylinder 2A ausgefahren' }
+      { id: 'c1out', dir: 'out', name: '1M1', label: 'Zylinder 1A1 ausfahren' },
+      { id: 'c1in', dir: 'out', name: '1M2', label: 'Zylinder 1A1 einfahren (bistabil)' },
+      { id: 'c1b1', dir: 'in', name: '1B1', label: 'Zylinder 1A1 eingefahren' },
+      { id: 'c1b2', dir: 'in', name: '1B2', label: 'Zylinder 1A1 ausgefahren' },
+      { id: 'c2out', dir: 'out', name: '2M1', label: 'Zylinder 2A1 ausfahren' },
+      { id: 'c2in', dir: 'out', name: '2M2', label: 'Zylinder 2A1 einfahren (bistabil)' },
+      { id: 'c2b1', dir: 'in', name: '2B1', label: 'Zylinder 2A1 eingefahren' },
+      { id: 'c2b2', dir: 'in', name: '2B2', label: 'Zylinder 2A1 ausgefahren' }
     ],
     options: [
       { id: 'valve', label: 'Ventile', values: [['bi', 'bistabil (Impulsventil)'], ['mono', 'monostabil (Federrückstellung)']] }
@@ -168,8 +168,8 @@
     draw: function (st, out, names) {
       var sen = cylinder.sensors(st);
       var bi = st.valve !== 'mono';
-      return cylDraw(14, 62, st.p1, out('c1out'), out('c1in'), sen.c1b1, sen.c1b2, 'Zylinder 1A', names, 'c1', bi) +
-        cylDraw(14, 160, st.p2, out('c2out'), out('c2in'), sen.c2b1, sen.c2b2, 'Zylinder 2A', names, 'c2', bi);
+      return cylDraw(14, 62, st.p1, out('c1out'), out('c1in'), sen.c1b1, sen.c1b2, 'Zylinder 1A1', names, 'c1', bi) +
+        cylDraw(14, 160, st.p2, out('c2out'), out('c2in'), sen.c2b1, sen.c2b2, 'Zylinder 2A1', names, 'c2', bi);
     }
   };
 
@@ -178,7 +178,8 @@
   var conveyor = {
     id: 'conveyor',
     title: 'Förderband',
-    description: 'Teile werden am Anfang aufgelegt und laufen bis zum Anschlag am Ende. Der Auswerfer schiebt ein Teil am Ende in die Ablage.',
+    description: 'Teile werden am Anfang aufgelegt und laufen bis zum Anschlag am Ende. Der Auswerfer schiebt ein Teil am Ende in die Ablage. ' +
+      'Hält das Band an, bleiben Teile liegen, wo sie sind; „Vorderstes Teil entnehmen“ nimmt sie von Hand herunter.',
     signals: [
       { id: 'motor', dir: 'out', name: 'M1', label: 'Bandmotor' },
       { id: 'eject', dir: 'out', name: 'Y1', label: 'Auswerfer am Bandende' },
@@ -225,13 +226,17 @@
       {
         label: 'Teil auflegen',
         run: function (st) {
-          if (!st.parts.some(function (p) { return p.x < conveyor.GAP; })) st.parts.push({ x: 0 });
+          if (st.parts.some(function (p) { return p.x < conveyor.GAP; })) return 'Am Bandanfang liegt schon ein Teil.';
+          st.parts.push({ x: 0 });
         }
       },
       {
-        label: 'Teil am Ende entnehmen',
+        // vorderstes Teil (am Ende oder liegen geblieben, wenn das Band vorher angehalten hat)
+        label: 'Vorderstes Teil entnehmen',
         run: function (st) {
-          st.parts = st.parts.filter(function (p) { return p.x < 95; });
+          if (!st.parts.length) return 'Auf dem Band liegt kein Teil.';
+          var front = st.parts.reduce(function (a, b) { return b.x > a.x ? b : a; });
+          st.parts.splice(st.parts.indexOf(front), 1);
         }
       }
     ],

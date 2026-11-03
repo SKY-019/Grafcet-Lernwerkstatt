@@ -115,11 +115,14 @@
             ['s6', 't7'], ['t7', 's1']],
           {
             note: 'Farbmischer\n' +
-              'Nach dem Start läuft Grundfarbe ein (Y1), bis B12 meldet, dass sie\n' +
-              'eingefüllt ist. Der Wahlschalter entscheidet, ob Farbe A (Y2) oder\n' +
-              'Farbe B (Y3) zudosiert wird (ODER-Verzweigung, die Bedingungen\n' +
-              'schließen sich aus). Danach wird 3 s gerührt und abgefüllt, solange\n' +
-              'noch Farbe im Behälter ist (bedingte Aktion Y4).\n' +
+              'Nach dem Start (Taster S1) läuft Grundfarbe ein (Y1), bis B12 meldet,\n' +
+              'dass sie eingefüllt ist. Die Wahlschalter B10 (Farbe A) und B11\n' +
+              '(Farbe B) entscheiden, ob Farbe A (Y2) oder Farbe B (Y3) zudosiert\n' +
+              'wird – jeweils, bis der Dosierbehälter leer ist (B3 bzw. B4 = 0).\n' +
+              'ODER-Verzweigung: Die Bedingungen schließen sich aus; sind beide oder\n' +
+              'keiner der Wahlschalter an, geht es nicht weiter.\n' +
+              'Danach rührt M2 3 s, dann wird abgefüllt (Y4), solange noch Farbe im\n' +
+              'Mischbehälter ist (B2 = 1, bedingte Aktion); ist er leer, beginnt alles neu.\n' +
               'Der Merker „Dosiert“ merkt sich, dass eine Farbe zudosiert wurde.\n' +
               'Bedienung: Beim Einfüllen erst B2 (Behälter nicht leer), dann B12\n' +
               'auf 1 setzen. Zum Abfüllen B2 auf 0 setzen, danach B12 wieder auf 0.\n' +
@@ -171,12 +174,15 @@
           {
             layout: { s5: 'column' },
             note: 'Bohrstation\n' +
-              'Das Werkstück wird gespannt (1M1 := 1, speichernd).\n' +
+              'Start mit S1, wenn ein Werkstück eingelegt ist (B0).\n' +
+              'Das Werkstück wird gespannt (1M1 := 1, speichernd), bis 1B2 meldet.\n' +
               'Dann laufen zwei Zweige gleichzeitig (UND-Verzweigung):\n' +
-              'links bohren und Bohrer zurückfahren, rechts absaugen.\n' +
+              'links bohren (Bohrer abwärts 2M1, Bohrmotor M3) bis zur Bohrtiefe\n' +
+              '(2B2), dann Bohrer zurück (2M2) bis oben (2B1); rechts absaugen (M4).\n' +
               'Jede erreichte Bohrtiefe (↑2B2) zählt C1 um 1 hoch.\n' +
               'P1 warnt, solange das Kühlmittel fehlt (/B5).\n' +
-              'Erst wenn beide Zweige fertig sind, wird gelöst;\n' +
+              'Ist der Bohrer wieder oben, endet auch die Absaugung (UND-Zusammen-\n' +
+              'führung) und das Werkstück wird gelöst (1M1 := 0), bis 1B2 = 0;\n' +
               'der Sprung führt zurück zu Schritt 1.\n' +
               'Grundstellung (beim Start gesetzt): B0 = 1, 2B1 = 1, B5 = 1.',
             vars: {
@@ -220,9 +226,10 @@
             plant: { id: 'tank' },
             note: 'Tank (mit virtueller Anlage)\n' +
               'Simulieren → Start → Taster S1 drücken.\n' +
-              'Der Tank füllt sich bis zum oberen Sensor B2,\n' +
-              'wird 5 s gerührt und danach entleert,\n' +
-              'bis der untere Sensor B1 frei ist.',
+              'Gestartet wird nur bei leerem Tank (B1 = 0).\n' +
+              'Das Zulaufventil Y1 füllt bis zum oberen Sensor B2,\n' +
+              'dann rührt M1 5 s. Danach entleert das Ablaufventil Y2\n' +
+              '(das Rührwerk läuft weiter), bis der untere Sensor B1 frei ist.',
             vars: {
               S1: ['Start-Taster', 'button'],
               B1: ['Füllstand unten erreicht'],
@@ -259,10 +266,11 @@
           {
             plant: { id: 'cylinder', options: { valve: 'bi' } },
             note: 'Zylinderfolge A+ B+ B− A− (mit virtueller Anlage)\n' +
+              'Start mit S1, wenn beide Zylinder eingefahren sind (1B1, 2B1).\n' +
+              '1A1 aus (1M1) bis 1B2, 2A1 aus (2M1) bis 2B2,\n' +
+              '2A1 ein (2M2) bis 2B1, 1A1 ein (1M2) bis 1B1.\n' +
               'Bistabile Impulsventile: ein kurzes Signal reicht,\n' +
-              'der Zylinder fährt bis in die Endlage.\n' +
-              'Jeder Schritt wartet auf den Endlagensensor\n' +
-              'der gerade bewegten Zylinderstange.',
+              'der Zylinder fährt bis in die Endlage.',
             vars: {
               S1: ['Start-Taster', 'button'],
               '1B1': ['1A1 eingefahren'],
@@ -302,7 +310,8 @@
             plant: { id: 'conveyor' },
             note: 'Förderband (mit virtueller Anlage)\n' +
               'Simulieren → Start → bei der Anlage „Teil auflegen“.\n' +
-              'Das Band läuft, bis das Teil am Ende ist, dann wirft Y1\n' +
+              'Ein Teil am Bandanfang (B1) startet das Band (M1).\n' +
+              'Es läuft, bis das Teil am Ende ist (B2), dann wirft Y1\n' +
               'es in die Ablage und C1 zählt hoch.\n' +
               'Nach 3 Teilen leuchtet P1, bis mit S2 quittiert wird;\n' +
               'beim Verlassen von Schritt 4 wird C1 auf 0 gesetzt.',
@@ -351,12 +360,14 @@
           plant: { id: 'cylinder', options: { valve: 'mono' } },
           frames: [['G1', 's1'], ['G_Sicherheit', 's10']],
           note: 'Zylinderfolge mit NOT-HALT (mit virtueller Anlage)\n' +
-            'G1 ist der Ablauf A+ B+ B− A− mit monostabilen Ventilen.\n' +
+            'G1 ist der Ablauf A+ B+ B− A− mit monostabilen Ventilen: Start mit S1\n' +
+            'in Grundstellung (1B1, 2B1); 1M1 bzw. 2M1 bleiben gesetzt (speichernd),\n' +
+            'bis sie zurückgesetzt werden; weiter jeweils mit 1B2, 2B2, 2B1, 1B1.\n' +
             'G_Sicherheit überwacht den NOT-HALT S0 (Öffner: 1 = nicht gedrückt).\n' +
             'Wird S0 gedrückt, zwingt Schritt 11 den Teil-GRAFCET G1 in seine\n' +
             'Anfangssituation G1{INIT}: Schritt 1 setzt die Ventile zurück,\n' +
-            'die Zylinder fahren ein. G1 steht still, bis entriegelt und mit S3\n' +
-            'quittiert wurde.\n' +
+            'die Zylinder fahren ein. Die Meldeleuchte P0 leuchtet. G1 steht still,\n' +
+            'bis entriegelt (S0 = 1) und mit S3 quittiert wurde.\n' +
             'Grundstellung: S0 = 1 (ist beim Start schon gesetzt).\n' +
             'Lernbeispiel für die Zwangssteuerung. Ein echter NOT-HALT wird zusätzlich\n' +
             'als Sicherheitsfunktion nach DIN EN ISO 13850 und DIN EN 60204-1 aufgebaut\n' +

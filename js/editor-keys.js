@@ -104,7 +104,7 @@
           GE.app.updateHint();
           GE.app.toast('Quelle gewählt – Ziel mit Strg+Pfeiltasten wählen, dann Enter.');
         } else if (GE.app.pendingConnect !== id) {
-          finishConnect(GE.app.pendingConnect, id);
+          finishConnect(GE.app.pendingConnect, id, true);
         }
         return;
       case 'or':

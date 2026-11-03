@@ -1153,7 +1153,8 @@
     overlay.innerHTML = s;
   }
 
-  function finishConnect(from, to) {
+  /** byKey: per Tastatur – danach Auswahlwerkzeug, neue Transition gleich beschriften */
+  function finishConnect(from, to, byKey) {
     var jump = app.tool === 'jump';
     var page = app.page();
     var res = app.change(function () {
@@ -1165,7 +1166,13 @@
       app.select([from]);
     } else {
       if (res.message) app.toast(res.message);
-      app.select([to]);
+      var t = byKey && res.created.filter(function (id) { return M.kindOf(page, id) === 'transition'; })[0];
+      if (byKey) app.setTool('select');
+      app.select([t || to]);
+      if (t) {
+        GE.editor.reveal(t);
+        GE.editor.startInline(t);
+      }
     }
     app.updateHint();
   }
